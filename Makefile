@@ -1,3 +1,10 @@
+# BackConnectPost Docker Makefile
+# 
+# Usage:
+# 1. Set your Docker Personal Access Token: export DOCKER_PASSWORD=your_token_here
+# 2. Run: make docker-login
+# 3. Build and push: make build && make push
+#
 # Variables
 DOCKER_USER=williams2022
 IMAGE_NAME=$(DOCKER_USER)/backconnectpost
@@ -5,9 +12,10 @@ TAG=latest
 CONTAINER_NAME=backconnectpost
 PORT=3000
 
-# Docker login (usa tu token personal)
+# Docker login (requires DOCKER_PASSWORD environment variable)
 docker-login:
-	docker login -u williams2022 --password-stdin <<< "$$DOCKER_PASSWORD"
+	@echo "Logging in to Docker Hub..."
+	@docker login -u $(DOCKER_USER) --password-stdin <<< "$$DOCKER_PASSWORD"
 
 # Build de la imagen
 build:
