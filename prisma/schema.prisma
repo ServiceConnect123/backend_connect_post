@@ -2,7 +2,8 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl", "debian-openssl-3.0.x", "darwin"]
 }
 
 datasource db {
@@ -11,16 +12,44 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-model User {
+model Company {
   id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
   name      String
+  nit       String   @unique
+  email     String
+  phone     String
+  address   String
+  country   String
+  city      String
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   
   // Relationships
-  posts     Post[]
+  users     User[]
+
+  @@map("companies")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  MODERATOR
+}
+
+model User {
+  id           String   @id @default(cuid())
+  supabaseUuid String   @unique @map("supabase_uuid") // UUID de Supabase Auth
+  email        String   @unique
+  firstName    String   @map("first_name")
+  lastName     String   @map("last_name")
+  role         UserRole @default(USER)
+  companyId    String   @map("company_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  
+  // Relationships
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  posts        Post[]
 
   @@map("users")
 }

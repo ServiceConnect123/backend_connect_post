@@ -11,6 +11,7 @@ import {
 import { SupabaseAuthGuard } from '../../../../shared/infrastructure/guards/supabase-auth.guard';
 import { LoginUseCase } from '../../application/use-cases/login.use-case';
 import { RegisterUseCase } from '../../application/use-cases/register.use-case';
+import { GetProfileUseCase } from '../../application/use-cases/get-profile.use-case';
 import { LoginDto } from '../../application/dtos/login.dto';
 import { RegisterDto } from '../../application/dtos/register.dto';
 import { ForgotPasswordDto } from '../../application/dtos/forgot-password.dto';
@@ -23,6 +24,7 @@ export class AuthController {
   constructor(
     private readonly loginUseCase: LoginUseCase,
     private readonly registerUseCase: RegisterUseCase,
+    private readonly getProfileUseCase: GetProfileUseCase,
     private readonly supabaseAuthService: SupabaseAuthService,
   ) {}
 
@@ -138,7 +140,7 @@ export class AuthController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ 
     summary: 'Obtener perfil de usuario',
-    description: 'Obtiene la información del perfil del usuario autenticado'
+    description: 'Obtiene la información del perfil del usuario autenticado incluyendo datos de la empresa'
   })
   @ApiResponse({ 
     status: 200, 
@@ -147,12 +149,27 @@ export class AuthController {
       example: {
         message: 'Profile retrieved successfully',
         user: {
-          id: 'uuid-here',
+          id: 'cuid-user-id',
+          supabaseUuid: 'supabase-uuid-here',
           email: 'user@example.com',
-          name: 'User Name',
+          firstName: 'John',
+          lastName: 'Doe',
+          fullName: 'John Doe',
+          role: 'ADMIN',
           emailConfirmed: true,
           createdAt: '2024-01-01T00:00:00.000Z',
-          lastSignIn: '2024-01-01T12:00:00.000Z'
+          updatedAt: '2024-01-01T00:00:00.000Z',
+          lastSignIn: '2024-01-01T12:00:00.000Z',
+          company: {
+            id: 'company-id',
+            name: 'NetSolutionLabs',
+            nit: '900123456-7',
+            email: 'contact@netsolutionlabs.com',
+            phone: '+57 3001234567',
+            address: 'Cra 10 # 45-23',
+            country: 'Colombia',
+            city: 'Barranquilla'
+          }
         }
       }
     }
@@ -161,17 +178,25 @@ export class AuthController {
     description: 'Token no válido o expirado'
   })
   async getProfile(@Request() req: any) {
-    return {
-      message: 'Profile retrieved successfully',
-      user: {
-        id: req.user.id,
-        email: req.user.email,
-        name: req.user.user_metadata?.name || req.user.email?.split('@')[0],
-        emailConfirmed: req.user.email_confirmed_at !== null,
-        createdAt: req.user.created_at,
-        lastSignIn: req.user.last_sign_in_at,
-      },
-    };
+    try {
+      const profileData = await this.getProfileUseCase.execute(req.user.id);
+
+      return {
+        message: 'Profile retrieved successfully',
+        user: {
+          ...profileData.user,
+          emailConfirmed: req.user.email_confirmed_at !== null,
+          lastSignIn: req.user.last_sign_in_at,
+          company: profileData.company
+        },
+      };
+    } catch (error) {
+      console.error('Error retrieving user profile:', error);
+      return {
+        message: 'Error retrieving profile',
+        error: error.message || 'Internal server error'
+      };
+    }
   }
 
   @Post('forgot-password')

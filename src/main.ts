@@ -58,7 +58,7 @@ async function bootstrap() {
 
   // Swagger configuration
   const isProduction = process.env.NODE_ENV === 'production';
-  const port = process.env.PORT ?? 3001;
+  const port = process.env.PORT || 3001;
   
   const configBuilder = new DocumentBuilder()
     .setTitle('BackConnectPost API')
@@ -111,9 +111,10 @@ async function bootstrap() {
     ],
   });
 
-  await app.listen(process.env.PORT ?? 3001);
-  const url = await app.getUrl();
-  console.log(`Application is running on: ${url}`);
-  console.log(`📚 Swagger documentation available at: ${url}/api/docs`);
+  await app.listen(port, '0.0.0.0');
+  
+  console.log(`🚀 Application is running on port: ${port}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📚 Swagger documentation available at: http://localhost:${port}/api/docs`);
 }
 bootstrap();
