@@ -1,8 +1,8 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { USER_REPOSITORY_TOKEN } from '../../domain/repositories/user.repository.token';
-import { COMPANY_REPOSITORY_TOKEN } from '../../domain/repositories/company.repository';
 import type { UserRepository } from '../../domain/repositories/user.repository';
 import type { CompanyRepository } from '../../domain/repositories/company.repository';
+import { COMPANY_REPOSITORY_TOKEN } from '../../domain/repositories/company.repository.token';
 
 @Injectable()
 export class GetProfileUseCase {

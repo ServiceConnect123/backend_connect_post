@@ -1,4 +1,6 @@
 import { BaseEntity } from '../../../../shared/domain/entities/entity.base';
+import { Country } from '../../../locations/domain/entities/country.entity';
+import { City } from '../../../locations/domain/entities/city.entity';
 
 export interface CompanyProps {
   name: string;
@@ -6,8 +8,10 @@ export interface CompanyProps {
   email: string;
   phone: string;
   address: string;
-  country: string;
-  city: string;
+  countryId: string;
+  cityId: string;
+  country?: Country;
+  city?: City;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -37,11 +41,19 @@ export class Company extends BaseEntity<CompanyProps> {
     return this.props.address;
   }
 
-  get country(): string {
+  get countryId(): string {
+    return this.props.countryId;
+  }
+
+  get cityId(): string {
+    return this.props.cityId;
+  }
+
+  get country(): Country | undefined {
     return this.props.country;
   }
 
-  get city(): string {
+  get city(): City | undefined {
     return this.props.city;
   }
 
@@ -65,8 +77,10 @@ export class Company extends BaseEntity<CompanyProps> {
       email: this.email,
       phone: this.phone,
       address: this.address,
-      country: this.country,
-      city: this.city,
+      countryId: this.countryId,
+      cityId: this.cityId,
+      country: this.country?.toJSON(),
+      city: this.city?.toJSON(),
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };

@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl", "debian-openssl-3.0.x", "darwin"]
@@ -19,53 +16,74 @@ model Company {
   email     String
   phone     String
   address   String
-  country   String
-  city      String
+  countryId String   @map("country_id")
+  cityId    String   @map("city_id")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  
-  // Relationships
   users     User[]
+  country   Country  @relation(fields: [countryId], references: [id])
+  city      City     @relation(fields: [cityId], references: [id])
 
   @@map("companies")
+}
+
+model Country {
+  id        String    @id @default(cuid())
+  key       String    @unique
+  value     String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  cities    City[]
+  companies Company[]
+
+  @@map("countries")
+}
+
+model City {
+  id        String    @id @default(cuid())
+  key       String    @unique
+  value     String
+  countryId String    @map("country_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  country   Country   @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  companies Company[]
+
+  @@map("cities")
+}
+
+model Post {
+  id           String   @id @default(cuid())
+  title        String
+  content      String
+  isPublished  Boolean  @default(false) @map("is_published")
+  tags         String[]
+  authorId     String   @map("author_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("posts")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  supabaseUuid  String   @unique @map("supabase_uuid")
+  email         String
+  firstName     String   @map("first_name")
+  lastName      String   @map("last_name")
+  role          UserRole @default(USER)
+  companyId     String   @map("company_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  posts         Post[]
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("users")
 }
 
 enum UserRole {
   ADMIN
   USER
   MODERATOR
-}
-
-model User {
-  id           String   @id @default(cuid())
-  supabaseUuid String   @unique @map("supabase_uuid") // UUID de Supabase Auth
-  email        String   @unique
-  firstName    String   @map("first_name")
-  lastName     String   @map("last_name")
-  role         UserRole @default(USER)
-  companyId    String   @map("company_id")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-  
-  // Relationships
-  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  posts        Post[]
-
-  @@map("users")
-}
-
-model Post {
-  id          String   @id @default(cuid())
-  title       String
-  content     String
-  isPublished Boolean  @default(false) @map("is_published")
-  tags        String[]
-  authorId    String   @map("author_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  // Relationships
-  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-
-  @@map("posts")
 }

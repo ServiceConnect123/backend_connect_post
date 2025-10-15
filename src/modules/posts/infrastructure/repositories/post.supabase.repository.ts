@@ -34,7 +34,7 @@ export class PostSupabaseRepository implements PostRepository, OnModuleInit {
 
   async findByAuthor(authorId: string): Promise<Post[]> {
     const posts = await this.prisma.post.findMany({
-      where: { authorId },
+      where: { authorId: authorId },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -94,9 +94,10 @@ export class PostSupabaseRepository implements PostRepository, OnModuleInit {
     const postData = {
       title: post.title,
       content: post.content,
-      authorId: post.authorId,
-      isPublished: post.isPublished,
+      author_id: post.authorId,
+      is_published: post.isPublished,
       tags: post.tags,
+      updated_at: new Date(),
     };
 
     const savedPost = await this.prisma.post.upsert({
@@ -104,7 +105,12 @@ export class PostSupabaseRepository implements PostRepository, OnModuleInit {
       update: postData,
       create: {
         id: post.id,
-        ...postData,
+        title: post.title,
+        content: post.content,
+        isPublished: post.isPublished,
+        tags: post.tags,
+        updatedAt: new Date(),
+        author: { connect: { id: post.authorId } },
       },
     });
 
