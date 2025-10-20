@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/infrastructure/database/prisma.service';
-import { UserRepository } from '../../domain/repositories/user.repository';
+import { UserRepository, UserCompanyAssociation } from '../../domain/repositories/user.repository';
 import { User, UserRole } from '../../domain/entities/user.entity';
+import { Company } from '../../domain/entities/company.entity';
 import { UserRole as PrismaUserRole } from '@prisma/client';
 
 @Injectable()
@@ -63,6 +64,86 @@ export class UserRepositoryImpl implements UserRepository {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     }, user.id);
+  }
+
+  async findBySupabaseUuidAndCompanyId(supabaseUuid: string, companyId: string): Promise<User | null> {
+    const user = await this.prisma.user.findFirst({
+      where: { 
+        supabaseUuid,
+        companyId 
+      },
+    });
+
+    if (!user) return null;
+
+    return User.create({
+      supabaseUuid: user.supabaseUuid,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role as UserRole,
+      companyId: user.companyId,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    }, user.id);
+  }
+
+  async findCompaniesBySupabaseUuid(supabaseUuid: string): Promise<Company[]> {
+    const users = await this.prisma.user.findMany({
+      where: { supabaseUuid },
+      include: {
+        company: true
+      }
+    });
+
+    const companies = users.map(user => 
+      Company.create({
+        name: user.company.name,
+        nit: user.company.nit,
+        email: user.company.email,
+        phone: user.company.phone,
+        address: user.company.address,
+        countryId: user.company.countryId,
+        cityId: user.company.cityId,
+        createdAt: user.company.createdAt,
+        updatedAt: user.company.updatedAt,
+      }, user.company.id)
+    );
+
+    return companies;
+  }
+
+  async findUserCompanyAssociationsBySupabaseUuid(supabaseUuid: string): Promise<UserCompanyAssociation[]> {
+    const users = await this.prisma.user.findMany({
+      where: { supabaseUuid },
+      include: {
+        company: true
+      }
+    });
+
+    return users.map(user => ({
+      user: User.create({
+        supabaseUuid: user.supabaseUuid,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role as UserRole,
+        companyId: user.companyId,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      }, user.id),
+      company: Company.create({
+        name: user.company.name,
+        nit: user.company.nit,
+        email: user.company.email,
+        phone: user.company.phone,
+        address: user.company.address,
+        countryId: user.company.countryId,
+        cityId: user.company.cityId,
+        createdAt: user.company.createdAt,
+        updatedAt: user.company.updatedAt,
+      }, user.company.id)
+    }));
   }
 
   async save(user: User): Promise<User> {

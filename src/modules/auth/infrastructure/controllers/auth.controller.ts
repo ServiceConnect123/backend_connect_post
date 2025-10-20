@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Request, UseGuards, Put } from '@nestjs/common';
+import { Controller, Post, Body, Get, Request, UseGuards, Put, Query } from '@nestjs/common';
 import { 
   ApiTags, 
   ApiOperation, 
@@ -6,7 +6,8 @@ import {
   ApiBearerAuth, 
   ApiBody,
   ApiUnauthorizedResponse,
-  ApiBadRequestResponse 
+  ApiBadRequestResponse,
+  ApiQuery 
 } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../../../../shared/infrastructure/guards/supabase-auth.guard';
 import { LoginUseCase } from '../../application/use-cases/login.use-case';
@@ -140,7 +141,13 @@ export class AuthController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ 
     summary: 'Obtener perfil de usuario',
-    description: 'Obtiene la información del perfil del usuario autenticado incluyendo datos de la empresa'
+    description: 'Obtiene la información del perfil del usuario autenticado incluyendo datos de empresa(s). Soporta usuarios con múltiples empresas.'
+  })
+  @ApiQuery({
+    name: 'companyId',
+    required: false,
+    description: 'ID de la empresa específica para obtener el contexto del usuario en esa empresa',
+    type: String
   })
   @ApiResponse({ 
     status: 200, 
@@ -167,9 +174,20 @@ export class AuthController {
             email: 'contact@netsolutionlabs.com',
             phone: '+57 3001234567',
             address: 'Cra 10 # 45-23',
-            country: 'Colombia',
-            city: 'Barranquilla'
-          }
+            countryId: 'country-id',
+            cityId: 'city-id'
+          },
+          companies: [
+            {
+              id: 'company-id',
+              name: 'NetSolutionLabs',
+              nit: '900123456-7',
+              role: 'ADMIN',
+              userCreatedAt: '2024-01-01T00:00:00.000Z'
+            }
+          ],
+          isMultiCompany: false,
+          totalCompanies: 1
         }
       }
     }
@@ -177,9 +195,9 @@ export class AuthController {
   @ApiUnauthorizedResponse({ 
     description: 'Token no válido o expirado'
   })
-  async getProfile(@Request() req: any) {
+  async getProfile(@Request() req: any, @Query('companyId') companyId?: string) {
     try {
-      const profileData = await this.getProfileUseCase.execute(req.user.id);
+      const profileData = await this.getProfileUseCase.execute(req.user.id, companyId);
 
       return {
         message: 'Profile retrieved successfully',
@@ -187,7 +205,10 @@ export class AuthController {
           ...profileData.user,
           emailConfirmed: req.user.email_confirmed_at !== null,
           lastSignIn: req.user.last_sign_in_at,
-          company: profileData.company
+          company: profileData.company,
+          companies: profileData.companies,
+          isMultiCompany: profileData.isMultiCompany,
+          totalCompanies: profileData.totalCompanies
         },
       };
     } catch (error) {

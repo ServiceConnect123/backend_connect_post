@@ -13,45 +13,92 @@ export class GetProfileUseCase {
     private readonly companyRepository: CompanyRepository,
   ) {}
 
-  async execute(supabaseUuid: string) {
-    // Buscar el usuario por su UUID de Supabase
-    const user = await this.userRepository.findBySupabaseUuid(supabaseUuid);
+  async execute(supabaseUuid: string, companyId?: string) {
+    console.log('🔍 GetProfileUseCase: Starting profile retrieval', { supabaseUuid, companyId });
+
+    // Get all user-company associations for this user
+    const userCompanies = await this.userRepository.findUserCompanyAssociationsBySupabaseUuid(supabaseUuid);
     
-    if (!user) {
+    if (!userCompanies || userCompanies.length === 0) {
+      console.log('❌ GetProfileUseCase: No user found for Supabase UUID:', supabaseUuid);
       throw new Error('User not found in database');
     }
 
-    // Buscar la información de la empresa
-    const company = await this.companyRepository.findById(user.companyId);
+    console.log(`📊 GetProfileUseCase: Found ${userCompanies.length} company association(s) for user`);
 
-    if (!company) {
-      throw new Error('Company not found');
+    // If companyId is provided, find the specific user-company combination
+    let targetUser;
+    let targetCompany;
+
+    if (companyId) {
+      console.log('🎯 GetProfileUseCase: Looking for specific company context:', companyId);
+      const targetAssociation = userCompanies.find(uc => uc.company.id === companyId);
+      
+      if (!targetAssociation) {
+        throw new Error('User not found in specified company context');
+      }
+      
+      targetUser = targetAssociation.user;
+      targetCompany = targetAssociation.company;
+    } else {
+      // No specific company requested - use the first one (for backward compatibility)
+      console.log('📋 GetProfileUseCase: No specific company requested, using first association');
+      targetUser = userCompanies[0].user;
+      targetCompany = userCompanies[0].company;
     }
 
-    return {
+    // Get all companies for the complete profile
+    const allCompanies = userCompanies.map(uc => ({
+      id: uc.company.id,
+      name: uc.company.name,
+      nit: uc.company.nit,
+      email: uc.company.email,
+      phone: uc.company.phone,
+      address: uc.company.address,
+      countryId: uc.company.countryId,
+      cityId: uc.company.cityId,
+      role: uc.user.role, // User's role in this specific company
+      userCreatedAt: uc.user.createdAt, // When user was added to this company
+    }));
+
+    const result = {
       user: {
-        id: user.id,
-        supabaseUuid: user.supabaseUuid,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        fullName: user.fullName,
-        role: user.role,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
+        id: targetUser.id,
+        supabaseUuid: targetUser.supabaseUuid,
+        email: targetUser.email,
+        firstName: targetUser.firstName,
+        lastName: targetUser.lastName,
+        fullName: targetUser.fullName,
+        role: targetUser.role,
+        createdAt: targetUser.createdAt,
+        updatedAt: targetUser.updatedAt,
       },
+      // Primary company (for backward compatibility)
       company: {
-        id: company.id,
-        name: company.name,
-        nit: company.nit,
-        email: company.email,
-        phone: company.phone,
-        address: company.address,
-        country: company.country,
-        city: company.city,
-        createdAt: company.createdAt,
-        updatedAt: company.updatedAt,
-      }
+        id: targetCompany.id,
+        name: targetCompany.name,
+        nit: targetCompany.nit,
+        email: targetCompany.email,
+        phone: targetCompany.phone,
+        address: targetCompany.address,
+        countryId: targetCompany.countryId,
+        cityId: targetCompany.cityId,
+        createdAt: targetCompany.createdAt,
+        updatedAt: targetCompany.updatedAt,
+      },
+      // All companies the user is associated with (new for multi-company support)
+      companies: allCompanies,
+      // Multi-company context info
+      isMultiCompany: allCompanies.length > 1,
+      totalCompanies: allCompanies.length,
     };
+
+    console.log('✅ GetProfileUseCase: Profile retrieved successfully', {
+      userId: targetUser.id,
+      primaryCompany: targetCompany.name,
+      totalCompanies: allCompanies.length,
+    });
+
+    return result;
   }
 }

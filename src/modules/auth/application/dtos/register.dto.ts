@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, MinLength, IsString, IsEnum, ValidateNested, IsOptional } from 'class-validator';
+import { IsEmail, IsNotEmpty, MinLength, IsString, IsEnum, ValidateNested, IsOptional, ValidateIf } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { UserRole } from '../../domain/entities/user.entity';
@@ -49,13 +49,15 @@ export class RegisterDto {
   role: UserRole;
 
   @ApiProperty({
-    description: 'Datos de la empresa a crear',
-    type: CompanyCreateDto
+    description: 'Datos de la empresa a crear (requerido si no se proporciona company_id)',
+    type: CompanyCreateDto,
+    required: false
   })
   @ValidateNested()
   @Type(() => CompanyCreateDto)
-  @IsNotEmpty()
-  company: CompanyCreateDto;
+  @ValidateIf((o) => !o.company_id)
+  @IsNotEmpty({ message: 'Company data is required when company_id is not provided' })
+  company?: CompanyCreateDto;
 
   @ApiProperty({
     description: 'ID de la empresa (opcional, si ya existe)',

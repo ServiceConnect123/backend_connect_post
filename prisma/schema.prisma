@@ -68,7 +68,7 @@ model Post {
 
 model User {
   id            String   @id @default(cuid())
-  supabaseUuid  String   @unique @map("supabase_uuid")
+  supabaseUuid  String   @map("supabase_uuid")
   email         String
   firstName     String   @map("first_name")
   lastName      String   @map("last_name")
@@ -79,6 +79,7 @@ model User {
   posts         Post[]
   company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
+  @@unique([supabaseUuid, companyId], name: "user_company_unique")
   @@map("users")
 }
 
