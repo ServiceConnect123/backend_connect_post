@@ -11,8 +11,9 @@ export interface UserProps {
   email: string;
   firstName: string;
   lastName: string;
-  role: UserRole;
-  companyId: string;
+  phone?: string;
+  documentType?: string;
+  documentNumber?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -42,12 +43,16 @@ export class User extends BaseEntity<UserProps> {
     return `${this.firstName} ${this.lastName}`;
   }
 
-  get role(): UserRole {
-    return this.props.role;
+  get phone(): string | undefined {
+    return this.props.phone;
   }
 
-  get companyId(): string {
-    return this.props.companyId;
+  get documentType(): string | undefined {
+    return this.props.documentType;
+  }
+
+  get documentNumber(): string | undefined {
+    return this.props.documentNumber;
   }
 
   get createdAt(): Date | undefined {
@@ -70,8 +75,9 @@ export class User extends BaseEntity<UserProps> {
       firstName: this.firstName,
       lastName: this.lastName,
       fullName: this.fullName,
-      role: this.role,
-      companyId: this.companyId,
+      phone: this.phone,
+      documentType: this.documentType,
+      documentNumber: this.documentNumber,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };

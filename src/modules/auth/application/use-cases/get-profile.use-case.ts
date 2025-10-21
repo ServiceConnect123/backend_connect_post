@@ -17,7 +17,7 @@ export class GetProfileUseCase {
     console.log('🔍 GetProfileUseCase: Starting profile retrieval', { supabaseUuid, companyId });
 
     // Get all user-company associations for this user
-    const userCompanies = await this.userRepository.findUserCompanyAssociationsBySupabaseUuid(supabaseUuid);
+    const userCompanies = await this.userRepository.findUserCompaniesBySupabaseUuid(supabaseUuid);
     
     if (!userCompanies || userCompanies.length === 0) {
       console.log('❌ GetProfileUseCase: No user found for Supabase UUID:', supabaseUuid);
@@ -27,24 +27,23 @@ export class GetProfileUseCase {
     console.log(`📊 GetProfileUseCase: Found ${userCompanies.length} company association(s) for user`);
 
     // If companyId is provided, find the specific user-company combination
-    let targetUser;
-    let targetCompany;
+    let targetAssociation;
+    let targetRole;
 
     if (companyId) {
       console.log('🎯 GetProfileUseCase: Looking for specific company context:', companyId);
-      const targetAssociation = userCompanies.find(uc => uc.company.id === companyId);
+      targetAssociation = userCompanies.find(uc => uc.company.id === companyId);
       
       if (!targetAssociation) {
         throw new Error('User not found in specified company context');
       }
       
-      targetUser = targetAssociation.user;
-      targetCompany = targetAssociation.company;
+      targetRole = targetAssociation.role;
     } else {
       // No specific company requested - use the first one (for backward compatibility)
       console.log('📋 GetProfileUseCase: No specific company requested, using first association');
-      targetUser = userCompanies[0].user;
-      targetCompany = userCompanies[0].company;
+      targetAssociation = userCompanies[0];
+      targetRole = targetAssociation.role;
     }
 
     // Get all companies for the complete profile
@@ -57,34 +56,38 @@ export class GetProfileUseCase {
       address: uc.company.address,
       countryId: uc.company.countryId,
       cityId: uc.company.cityId,
-      role: uc.user.role, // User's role in this specific company
-      userCreatedAt: uc.user.createdAt, // When user was added to this company
+      role: uc.role, // User's role in this specific company
+      userCompanyId: uc.userCompanyId,
+      userCreatedAt: uc.createdAt, // When user was added to this company
     }));
 
     const result = {
       user: {
-        id: targetUser.id,
-        supabaseUuid: targetUser.supabaseUuid,
-        email: targetUser.email,
-        firstName: targetUser.firstName,
-        lastName: targetUser.lastName,
-        fullName: targetUser.fullName,
-        role: targetUser.role,
-        createdAt: targetUser.createdAt,
-        updatedAt: targetUser.updatedAt,
+        id: targetAssociation.user.id,
+        supabaseUuid: targetAssociation.user.supabaseUuid,
+        email: targetAssociation.user.email,
+        firstName: targetAssociation.user.firstName,
+        lastName: targetAssociation.user.lastName,
+        fullName: targetAssociation.user.fullName,
+        phone: targetAssociation.user.phone,
+        documentType: targetAssociation.user.documentType,
+        documentNumber: targetAssociation.user.documentNumber,
+        role: targetRole, // Role in the current company context
+        createdAt: targetAssociation.user.createdAt,
+        updatedAt: targetAssociation.user.updatedAt,
       },
       // Primary company (for backward compatibility)
       company: {
-        id: targetCompany.id,
-        name: targetCompany.name,
-        nit: targetCompany.nit,
-        email: targetCompany.email,
-        phone: targetCompany.phone,
-        address: targetCompany.address,
-        countryId: targetCompany.countryId,
-        cityId: targetCompany.cityId,
-        createdAt: targetCompany.createdAt,
-        updatedAt: targetCompany.updatedAt,
+        id: targetAssociation.company.id,
+        name: targetAssociation.company.name,
+        nit: targetAssociation.company.nit,
+        email: targetAssociation.company.email,
+        phone: targetAssociation.company.phone,
+        address: targetAssociation.company.address,
+        countryId: targetAssociation.company.countryId,
+        cityId: targetAssociation.company.cityId,
+        createdAt: targetAssociation.company.createdAt,
+        updatedAt: targetAssociation.company.updatedAt,
       },
       // All companies the user is associated with (new for multi-company support)
       companies: allCompanies,
@@ -94,8 +97,8 @@ export class GetProfileUseCase {
     };
 
     console.log('✅ GetProfileUseCase: Profile retrieved successfully', {
-      userId: targetUser.id,
-      primaryCompany: targetCompany.name,
+      userId: targetAssociation.user.id,
+      primaryCompany: targetAssociation.company.name,
       totalCompanies: allCompanies.length,
     });
 

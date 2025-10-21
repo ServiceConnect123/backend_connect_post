@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../shared/infrastructure/database/prisma.service';
 import { UserRepository, UserCompanyAssociation } from '../../domain/repositories/user.repository';
 import { User, UserRole } from '../../domain/entities/user.entity';
+import { UserCompany } from '../../domain/entities/user-company.entity';
 import { Company } from '../../domain/entities/company.entity';
 import { UserRole as PrismaUserRole } from '@prisma/client';
 
@@ -9,6 +10,12 @@ import { UserRole as PrismaUserRole } from '@prisma/client';
 export class UserRepositoryImpl implements UserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  // Helper method to convert null to undefined
+  private nullToUndefined(value: string | null): string | undefined {
+    return value || undefined;
+  }
+
+  // User methods
   async findByEmail(email: string): Promise<User | null> {
     const user = await this.prisma.user.findFirst({
       where: { email },
@@ -21,8 +28,9 @@ export class UserRepositoryImpl implements UserRepository {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      role: user.role as UserRole,
-      companyId: user.companyId,
+      phone: this.nullToUndefined((user as any).phone),
+      documentType: this.nullToUndefined((user as any).documentType),
+      documentNumber: this.nullToUndefined((user as any).documentNumber),
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     }, user.id);
@@ -40,8 +48,9 @@ export class UserRepositoryImpl implements UserRepository {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      role: user.role as UserRole,
-      companyId: user.companyId,
+      phone: this.nullToUndefined((user as any).phone),
+      documentType: this.nullToUndefined((user as any).documentType),
+      documentNumber: this.nullToUndefined((user as any).documentNumber),
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     }, user.id);
@@ -59,116 +68,25 @@ export class UserRepositoryImpl implements UserRepository {
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      role: user.role as UserRole,
-      companyId: user.companyId,
+      phone: this.nullToUndefined((user as any).phone),
+      documentType: this.nullToUndefined((user as any).documentType),
+      documentNumber: this.nullToUndefined((user as any).documentNumber),
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     }, user.id);
-  }
-
-  async findBySupabaseUuidAndCompanyId(supabaseUuid: string, companyId: string): Promise<User | null> {
-    const user = await this.prisma.user.findFirst({
-      where: { 
-        supabaseUuid,
-        companyId 
-      },
-    });
-
-    if (!user) return null;
-
-    return User.create({
-      supabaseUuid: user.supabaseUuid,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role as UserRole,
-      companyId: user.companyId,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    }, user.id);
-  }
-
-  async findCompaniesBySupabaseUuid(supabaseUuid: string): Promise<Company[]> {
-    const users = await this.prisma.user.findMany({
-      where: { supabaseUuid },
-      include: {
-        company: true
-      }
-    });
-
-    const companies = users.map(user => 
-      Company.create({
-        name: user.company.name,
-        nit: user.company.nit,
-        email: user.company.email,
-        phone: user.company.phone,
-        address: user.company.address,
-        countryId: user.company.countryId,
-        cityId: user.company.cityId,
-        createdAt: user.company.createdAt,
-        updatedAt: user.company.updatedAt,
-      }, user.company.id)
-    );
-
-    return companies;
-  }
-
-  async findUserCompanyAssociationsBySupabaseUuid(supabaseUuid: string): Promise<UserCompanyAssociation[]> {
-    const users = await this.prisma.user.findMany({
-      where: { supabaseUuid },
-      include: {
-        company: true
-      }
-    });
-
-    return users.map(user => ({
-      user: User.create({
-        supabaseUuid: user.supabaseUuid,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role as UserRole,
-        companyId: user.companyId,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      }, user.id),
-      company: Company.create({
-        name: user.company.name,
-        nit: user.company.nit,
-        email: user.company.email,
-        phone: user.company.phone,
-        address: user.company.address,
-        countryId: user.company.countryId,
-        cityId: user.company.cityId,
-        createdAt: user.company.createdAt,
-        updatedAt: user.company.updatedAt,
-      }, user.company.id)
-    }));
-  }
-
-  async save(user: User): Promise<User> {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { id: user.id },
-    });
-
-    if (existingUser) {
-      return this.update(user);
-    } else {
-      return this.create(user);
-    }
   }
 
   async create(user: User): Promise<User> {
     const created = await this.prisma.user.create({
       data: {
-        id: user.id,
         supabaseUuid: user.supabaseUuid,
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        role: user.role as PrismaUserRole,
-        companyId: user.companyId,
-      }
+        phone: (user as any).phone,
+        documentType: (user as any).documentType,
+        documentNumber: (user as any).documentNumber,
+      },
     });
 
     return User.create({
@@ -176,8 +94,9 @@ export class UserRepositoryImpl implements UserRepository {
       email: created.email,
       firstName: created.firstName,
       lastName: created.lastName,
-      role: created.role as UserRole,
-      companyId: created.companyId,
+      phone: this.nullToUndefined((created as any).phone),
+      documentType: this.nullToUndefined((created as any).documentType),
+      documentNumber: this.nullToUndefined((created as any).documentNumber),
       createdAt: created.createdAt,
       updatedAt: created.updatedAt,
     }, created.id);
@@ -190,9 +109,10 @@ export class UserRepositoryImpl implements UserRepository {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        role: user.role as PrismaUserRole,
-        companyId: user.companyId,
-      }
+        phone: (user as any).phone,
+        documentType: (user as any).documentType,
+        documentNumber: (user as any).documentNumber,
+      },
     });
 
     return User.create({
@@ -200,8 +120,9 @@ export class UserRepositoryImpl implements UserRepository {
       email: updated.email,
       firstName: updated.firstName,
       lastName: updated.lastName,
-      role: updated.role as UserRole,
-      companyId: updated.companyId,
+      phone: this.nullToUndefined((updated as any).phone),
+      documentType: this.nullToUndefined((updated as any).documentType),
+      documentNumber: this.nullToUndefined((updated as any).documentNumber),
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
     }, updated.id);
@@ -211,5 +132,158 @@ export class UserRepositoryImpl implements UserRepository {
     await this.prisma.user.delete({
       where: { id },
     });
+  }
+
+  // UserCompany methods
+  async findUserCompanyByUserAndCompany(userId: string, companyId: string): Promise<UserCompany | null> {
+    const userCompany = await this.prisma.userCompany.findUnique({
+      where: {
+        userId_companyId: {
+          userId,
+          companyId,
+        },
+      },
+    });
+
+    if (!userCompany) return null;
+
+    return UserCompany.create({
+      userId: userCompany.userId,
+      companyId: userCompany.companyId,
+      role: userCompany.role as UserRole,
+      createdAt: userCompany.createdAt,
+      updatedAt: userCompany.updatedAt,
+    }, userCompany.id);
+  }
+
+  async findUserCompaniesByUserId(userId: string): Promise<UserCompany[]> {
+    const userCompanies = await this.prisma.userCompany.findMany({
+      where: { userId },
+    });
+
+    return userCompanies.map(uc => UserCompany.create({
+      userId: uc.userId,
+      companyId: uc.companyId,
+      role: uc.role as UserRole,
+      createdAt: uc.createdAt,
+      updatedAt: uc.updatedAt,
+    }, uc.id));
+  }
+
+  async findUserCompaniesBySupabaseUuid(supabaseUuid: string): Promise<UserCompanyAssociation[]> {
+    // First get the user
+    const user = await this.findBySupabaseUuid(supabaseUuid);
+    if (!user) return [];
+
+    // Then get user companies with company info
+    const userCompanies = await this.prisma.userCompany.findMany({
+      where: { userId: user.id },
+      include: { company: true },
+    });
+
+    return userCompanies.map(uc => ({
+      user,
+      company: Company.create({
+        name: uc.company.name,
+        nit: uc.company.nit,
+        email: uc.company.email,
+        phone: uc.company.phone,
+        address: uc.company.address,
+        countryId: uc.company.countryId,
+        cityId: uc.company.cityId,
+        createdAt: uc.company.createdAt,
+        updatedAt: uc.company.updatedAt,
+      }, uc.company.id),
+      role: uc.role as UserRole,
+      userCompanyId: uc.id,
+      createdAt: uc.createdAt,
+      updatedAt: uc.updatedAt,
+    }));
+  }
+
+  async createUserCompany(userCompany: UserCompany): Promise<UserCompany> {
+    const created = await this.prisma.userCompany.create({
+      data: {
+        userId: userCompany.userId,
+        companyId: userCompany.companyId,
+        role: userCompany.role as PrismaUserRole,
+      },
+    });
+
+    return UserCompany.create({
+      userId: created.userId,
+      companyId: created.companyId,
+      role: created.role as UserRole,
+      createdAt: created.createdAt,
+      updatedAt: created.updatedAt,
+    }, created.id);
+  }
+
+  async updateUserCompany(userCompany: UserCompany): Promise<UserCompany> {
+    const updated = await this.prisma.userCompany.update({
+      where: { id: userCompany.id },
+      data: {
+        role: userCompany.role as PrismaUserRole,
+      },
+    });
+
+    return UserCompany.create({
+      userId: updated.userId,
+      companyId: updated.companyId,
+      role: updated.role as UserRole,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+    }, updated.id);
+  }
+
+  async deleteUserCompany(id: string): Promise<void> {
+    await this.prisma.userCompany.delete({
+      where: { id },
+    });
+  }
+
+  // Combined methods for convenience
+  async findUserWithCompanies(supabaseUuid: string): Promise<{ user: User; companies: UserCompanyAssociation[] } | null> {
+    const user = await this.findBySupabaseUuid(supabaseUuid);
+    if (!user) return null;
+
+    const companies = await this.findUserCompaniesBySupabaseUuid(supabaseUuid);
+    return { user, companies };
+  }
+
+  async findUserCompanyAssociation(supabaseUuid: string, companyId: string): Promise<UserCompanyAssociation | null> {
+    const user = await this.findBySupabaseUuid(supabaseUuid);
+    if (!user) return null;
+
+    const userCompany = await this.prisma.userCompany.findUnique({
+      where: {
+        userId_companyId: {
+          userId: user.id,
+          companyId,
+        },
+      },
+      include: { company: true },
+    });
+
+    if (!userCompany) return null;
+
+    return {
+      user,
+      company: Company.create({
+        name: userCompany.company.name,
+        nit: userCompany.company.nit,
+        email: userCompany.company.email,
+        phone: userCompany.company.phone,
+        address: userCompany.company.address,
+        countryId: userCompany.company.countryId,
+        cityId: userCompany.company.cityId,
+        createdAt: userCompany.company.createdAt,
+        updatedAt: userCompany.company.updatedAt,
+      }, userCompany.company.id),
+      role: userCompany.role as UserRole,
+      userCompanyId: userCompany.id,
+      createdAt: userCompany.createdAt,
+      updatedAt: userCompany.updatedAt,
+    };
   }
 }

@@ -30,6 +30,6 @@ import { CompanyPrismaRepository } from './infrastructure/repositories/company.r
       useClass: CompanyPrismaRepository,
     },
   ],
-  exports: [SupabaseAuthService, SupabaseAuthGuard],
+  exports: [SupabaseAuthService, SupabaseAuthGuard, GetProfileUseCase],
 })
 export class AuthModule {}

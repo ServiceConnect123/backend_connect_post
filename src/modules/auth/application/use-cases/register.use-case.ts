@@ -6,6 +6,7 @@ import type { UserRepository } from '../../domain/repositories/user.repository';
 import type { CompanyRepository } from '../../domain/repositories/company.repository';
 import { USER_REPOSITORY_TOKEN } from '../../domain/repositories/user.repository.token';
 import { User } from '../../domain/entities/user.entity';
+import { UserCompany } from '../../domain/entities/user-company.entity';
 import { Company } from '../../domain/entities/company.entity';
 import { COMPANY_REPOSITORY_TOKEN } from '../../domain/repositories/company.repository.token';
 
@@ -25,46 +26,34 @@ export class RegisterUseCase {
     let supabaseUserId: string;
     let authUserData: any;
 
-    // 1. Intentar crear el usuario en Supabase Auth
-    console.log(`📝 Intentando crear usuario en Supabase Auth...`);
-    const authResult = await this.supabaseAuthService.signUp({
+    // 1. PRIMERO intentar login para ver si el usuario ya existe
+    console.log(`🔐 Verificando si usuario ${registerDto.email} ya existe mediante login...`);
+    const loginResult = await this.supabaseAuthService.signIn({
       email: registerDto.email,
       password: registerDto.password,
-      name: `${registerDto.first_name} ${registerDto.last_name}`,
     });
 
-    // 2. Manejar diferentes escenarios de Supabase
-    console.log(`🔄 Resultado de Supabase:`, authResult.error ? `Error: ${authResult.error.message}` : 'Éxito');
-    if (authResult.error) {
-      const errorMessage = authResult.error.message.toLowerCase();
-      
-      // Si el usuario ya existe en Supabase, obtener su información
-      if (errorMessage.includes('user already registered') || 
-          errorMessage.includes('email address already in use') ||
-          errorMessage.includes('email already registered')) {
+    if (!loginResult.error && loginResult.user) {
+      // Usuario existe y las credenciales coinciden
+      supabaseUserId = loginResult.user.id;
+      authUserData = loginResult.user;
+      isNewUser = false;
+      console.log(`✅ Usuario existente detectado - UUID: ${supabaseUserId}`);
+    } else {
+      // Usuario no existe o credenciales incorrectas, intentar crear nuevo usuario
+      console.log(`📝 Usuario no existe, intentando crear nuevo usuario en Supabase Auth...`);
+      const authResult = await this.supabaseAuthService.signUp({
+        email: registerDto.email,
+        password: registerDto.password,
+        name: `${registerDto.first_name} ${registerDto.last_name}`,
+      });
+
+      console.log(`🔄 Resultado de SignUp:`, authResult.error ? `Error: ${authResult.error.message}` : 'Éxito');
+
+      if (authResult.error) {
+        const errorMessage = authResult.error.message.toLowerCase();
         
-        console.log(`🔐 Usuario ${registerDto.email} ya existe en Supabase, intentando login para obtener UUID...`);
-        
-        // Intentar hacer login para obtener el UUID del usuario existente
-        const loginResult = await this.supabaseAuthService.signIn({
-          email: registerDto.email,
-          password: registerDto.password,
-        });
-
-        console.log(`🔐 Resultado del login:`, loginResult.error ? `Error: ${loginResult.error.message}` : `Éxito - UUID: ${loginResult.user?.id}`);
-
-        if (loginResult.error || !loginResult.user) {
-          throw new BadRequestException(
-            'El usuario ya existe pero las credenciales no coinciden. Si olvidaste tu contraseña, usa la opción de recuperación.'
-          );
-        }
-
-        supabaseUserId = loginResult.user.id;
-        authUserData = loginResult.user;
-        isNewUser = false;
-        console.log(`✅ Usuario existente detectado - UUID: ${supabaseUserId}`);
-      } else {
-        // Otros errores de Supabase
+        // Manejar errores específicos de validación
         if (errorMessage.includes('password') && errorMessage.includes('6 characters')) {
           throw new BadRequestException('La contraseña debe tener al menos 6 caracteres');
         }
@@ -79,11 +68,12 @@ export class RegisterUseCase {
 
         throw new UnauthorizedException(`Error de registro: ${authResult.error.message}`);
       }
-    } else {
+
       // Usuario nuevo creado exitosamente en Supabase
       if (!authResult.user) {
         throw new UnauthorizedException('No se pudo crear el usuario en el servicio de autenticación');
       }
+      
       supabaseUserId = authResult.user.id;
       authUserData = authResult.user;
       isNewUser = true;
@@ -94,12 +84,12 @@ export class RegisterUseCase {
       let targetCompany: Company;
       let isNewCompany = false;
 
-      // 3. Validar que se proporcione company_id O company
+      // 2. Validar que se proporcione company_id O company
       if (!registerDto.company_id && !registerDto.company) {
         throw new BadRequestException('Debe proporcionar company_id o datos de la empresa (company)');
       }
 
-      // 4. Buscar empresa por company_id si se proporciona
+      // 3. Buscar empresa por company_id si se proporciona
       if (registerDto.company_id) {
         const existingCompany = await this.companyRepository.findById(registerDto.company_id);
         if (!existingCompany) {
@@ -107,7 +97,7 @@ export class RegisterUseCase {
         }
         targetCompany = existingCompany;
       } else {
-        // 5. Buscar empresa por NIT en los datos de la nueva empresa
+        // 4. Buscar empresa por NIT en los datos de la nueva empresa
         if (!registerDto.company) {
           throw new BadRequestException('Debe proporcionar datos de la empresa cuando no se especifica company_id');
         }
@@ -118,7 +108,7 @@ export class RegisterUseCase {
           console.log(`Empresa con NIT ${registerDto.company.nit} ya existe, usando empresa existente`);
           targetCompany = existingCompanyByNit;
         } else {
-          // 6. Crear nueva empresa si no existe por NIT
+          // 5. Crear nueva empresa si no existe por NIT
           console.log(`Creando nueva empresa con NIT ${registerDto.company.nit}`);
           const newCompany = Company.create({
             name: registerDto.company.name,
@@ -135,41 +125,70 @@ export class RegisterUseCase {
         }
       }
 
-      // 7. SIEMPRE verificar si ya existe un registro de usuario con esta empresa específica
-      // Esto aplica tanto para usuarios nuevos como existentes
-      console.log(`🔍 Verificando si usuario ${supabaseUserId} ya está registrado en empresa ${targetCompany.id}...`);
-      const existingUserInCompany = await this.userRepository.findBySupabaseUuidAndCompanyId(
-        supabaseUserId, 
+      // 6. Verificar si el usuario ya existe en nuestra BD local
+      let user = await this.userRepository.findBySupabaseUuid(supabaseUserId);
+      
+      if (!user && isNewUser) {
+        // 7. Crear usuario en BD local si es nuevo
+        console.log(`👤 Creando usuario NUEVO en base de datos local...`);
+        user = User.create({
+          supabaseUuid: supabaseUserId,
+          email: registerDto.email,
+          firstName: registerDto.first_name,
+          lastName: registerDto.last_name,
+          phone: registerDto.phone,
+          documentType: registerDto.document_type,
+          documentNumber: registerDto.document_number,
+        });
+
+        user = await this.userRepository.create(user);
+        console.log(`✅ Usuario nuevo creado en BD local con ID: ${user.id}`);
+      } else if (!user && !isNewUser) {
+        // Usuario existe en Supabase pero no en BD local (caso edge)
+        console.log(`👤 Usuario existe en Auth pero no en BD local, creando...`);
+        user = User.create({
+          supabaseUuid: supabaseUserId,
+          email: registerDto.email,
+          firstName: registerDto.first_name,
+          lastName: registerDto.last_name,
+          phone: registerDto.phone,
+          documentType: registerDto.document_type,
+          documentNumber: registerDto.document_number,
+        });
+
+        user = await this.userRepository.create(user);
+        console.log(`✅ Usuario creado en BD local con ID: ${user.id}`);
+      }
+
+      // 8. Verificar si ya existe una asociación usuario-empresa
+      console.log(`🔍 Verificando asociación usuario-empresa...`);
+      const existingAssociation = await this.userRepository.findUserCompanyByUserAndCompany(
+        user!.id, 
         targetCompany.id
       );
       
-      console.log(`🔍 Resultado de búsqueda:`, existingUserInCompany ? `Usuario encontrado con ID: ${existingUserInCompany.id}` : 'No encontrado');
-      
-      if (existingUserInCompany) {
+      if (existingAssociation) {
         console.log(`❌ CONFLICTO DETECTADO: Usuario ya registrado en empresa`);
         throw new ConflictException(
           `El usuario ya está registrado en la empresa "${targetCompany.name}" (NIT: ${targetCompany.nit}). No se puede crear un registro duplicado.`
         );
       }
 
-      console.log(`✅ No hay conflicto, procediendo a crear registro...`);
-
-      // 8. Crear el registro de usuario en la base de datos
-      const user = User.create({
-        supabaseUuid: supabaseUserId,
-        email: registerDto.email,
-        firstName: registerDto.first_name,
-        lastName: registerDto.last_name,
-        role: registerDto.role,
+      // 9. Crear la asociación usuario-empresa
+      console.log(`🔗 Creando asociación usuario-empresa...`);
+      const userCompany = UserCompany.create({
+        userId: user!.id,
         companyId: targetCompany.id,
+        role: registerDto.role,
       });
 
-      const savedUser = await this.userRepository.create(user);
+      const savedUserCompany = await this.userRepository.createUserCompany(userCompany);
+      console.log(`✅ Asociación creada con ID: ${savedUserCompany.id}`);
 
-      // 9. Obtener todas las empresas asociadas al usuario (para información adicional)
-      const userCompanies = await this.userRepository.findCompaniesBySupabaseUuid(supabaseUserId);
+      // 10. Obtener todas las empresas asociadas al usuario (para información adicional)
+      const userCompanies = await this.userRepository.findUserCompaniesBySupabaseUuid(supabaseUserId);
 
-      // 10. Determinar el mensaje de respuesta según el escenario
+      // 11. Determinar el mensaje de respuesta según el escenario
       let message: string;
       if (isNewUser && isNewCompany) {
         message = 'Usuario y empresa registrados exitosamente. Por favor revisa tu email para verificar tu cuenta.';
@@ -184,13 +203,14 @@ export class RegisterUseCase {
       return {
         message,
         user: {
-          id: savedUser.id,
-          email: savedUser.email,
-          firstName: savedUser.firstName,
-          lastName: savedUser.lastName,
-          fullName: savedUser.fullName,
-          role: savedUser.role,
-          companyId: savedUser.companyId,
+          id: user!.id,
+          email: user!.email,
+          firstName: user!.firstName,
+          lastName: user!.lastName,
+          fullName: user!.fullName,
+          phone: user!.phone,
+          documentType: user!.documentType,
+          documentNumber: user!.documentNumber,
           emailConfirmed: isNewUser ? false : (authUserData.email_confirmed_at ? true : false),
           isNewUser,
           isNewCompany,
@@ -201,6 +221,11 @@ export class RegisterUseCase {
           nit: targetCompany.nit,
           email: targetCompany.email,
           isNewCompany,
+        },
+        userCompany: {
+          id: savedUserCompany.id,
+          role: savedUserCompany.role,
+          createdAt: savedUserCompany.createdAt,
         },
         associatedCompanies: userCompanies.length,
         summary: {

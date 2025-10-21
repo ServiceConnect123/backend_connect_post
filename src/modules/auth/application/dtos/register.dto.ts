@@ -49,6 +49,33 @@ export class RegisterDto {
   role: UserRole;
 
   @ApiProperty({
+    description: 'Teléfono del usuario',
+    example: '+57 300 123 4567',
+    required: false
+  })
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @ApiProperty({
+    description: 'Tipo de documento del usuario',
+    example: 'CC',
+    required: false
+  })
+  @IsString()
+  @IsOptional()
+  document_type?: string;
+
+  @ApiProperty({
+    description: 'Número de documento del usuario',
+    example: '12345678',
+    required: false
+  })
+  @IsString()
+  @IsOptional()
+  document_number?: string;
+
+  @ApiProperty({
     description: 'Datos de la empresa a crear (requerido si no se proporciona company_id)',
     type: CompanyCreateDto,
     required: false
