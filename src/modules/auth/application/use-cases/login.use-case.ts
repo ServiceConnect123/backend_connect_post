@@ -1,11 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { LoginDto } from '../dtos/login.dto';
 import { SupabaseAuthService } from '../../infrastructure/services/supabase-auth.service';
 import { UnauthorizedException } from '../../../../shared/infrastructure/exceptions/domain.exceptions';
+import { USER_REPOSITORY_TOKEN } from '../../domain/repositories/user.repository.token';
+import type { UserRepository } from '../../domain/repositories/user.repository';
 
 @Injectable()
 export class LoginUseCase {
-  constructor(private readonly supabaseAuthService: SupabaseAuthService) {}
+  constructor(
+    private readonly supabaseAuthService: SupabaseAuthService,
+    @Inject(USER_REPOSITORY_TOKEN)
+    private readonly userRepository: UserRepository,
+  ) {}
 
   async execute(loginDto: LoginDto) {
     const result = await this.supabaseAuthService.signIn({
@@ -21,7 +27,32 @@ export class LoginUseCase {
       throw new UnauthorizedException('Login failed - no session created');
     }
 
-    return {
+    // Get the user's selected company
+    let selectedCompany: any = null;
+    try {
+      if (result.user?.id) {
+        const selectedCompanyData = await this.userRepository.findSelectedCompany(result.user.id);
+        if (selectedCompanyData) {
+          selectedCompany = {
+            id: selectedCompanyData.company.id,
+            name: selectedCompanyData.company.name,
+            nit: selectedCompanyData.company.nit,
+            email: selectedCompanyData.company.email,
+            phone: selectedCompanyData.company.phone,
+            address: selectedCompanyData.company.address,
+            countryId: selectedCompanyData.company.countryId,
+            cityId: selectedCompanyData.company.cityId,
+            createdAt: selectedCompanyData.company.createdAt,
+            updatedAt: selectedCompanyData.company.updatedAt,
+          };
+        }
+      }
+    } catch (error) {
+      console.warn('Could not fetch selected company during login:', error.message);
+      // Continue with login even if company fetch fails
+    }
+
+    const response: any = {
       message: 'Login successful',
       user: {
         id: result.user?.id,
@@ -35,5 +66,11 @@ export class LoginUseCase {
         expiresAt: result.session.expires_at,
       },
     };
+
+    if (selectedCompany) {
+      response.company = selectedCompany;
+    }
+
+    return response;
   }
 }

@@ -40,10 +40,21 @@ export class GetProfileUseCase {
       
       targetRole = targetAssociation.role;
     } else {
-      // No specific company requested - use the first one (for backward compatibility)
-      console.log('📋 GetProfileUseCase: No specific company requested, using first association');
-      targetAssociation = userCompanies[0];
-      targetRole = targetAssociation.role;
+      // No specific company requested - use the selected company or first one
+      console.log('📋 GetProfileUseCase: No specific company requested, checking for selected company');
+      
+      // Try to get the selected company
+      const selectedCompany = await this.userRepository.findSelectedCompany(supabaseUuid);
+      
+      if (selectedCompany) {
+        console.log('✅ GetProfileUseCase: Using selected company:', selectedCompany.company.name);
+        targetAssociation = selectedCompany;
+        targetRole = selectedCompany.role;
+      } else {
+        console.log('📋 GetProfileUseCase: No selected company, using first association');
+        targetAssociation = userCompanies[0];
+        targetRole = targetAssociation.role;
+      }
     }
 
     // Get all companies for the complete profile

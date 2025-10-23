@@ -10,18 +10,18 @@ datasource db {
 }
 
 model Company {
-  id           String        @id @default(cuid())
-  name         String
-  nit          String        @unique
-  email        String
-  phone        String
-  address      String
-  countryId    String        @map("country_id")
-  cityId       String        @map("city_id")
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
-  city         City          @relation(fields: [cityId], references: [id])
-  country      Country       @relation(fields: [countryId], references: [id])
+  id            String        @id @default(cuid())
+  name          String
+  nit           String        @unique
+  email         String
+  phone         String
+  address       String
+  countryId     String        @map("country_id")
+  cityId        String        @map("city_id")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  city          City          @relation(fields: [cityId], references: [id])
+  country       Country       @relation(fields: [countryId], references: [id])
   userCompanies UserCompany[]
 
   @@map("companies")
@@ -67,34 +67,55 @@ model Post {
 }
 
 model User {
-  id            String        @id @default(cuid())
-  supabaseUuid  String        @unique @map("supabase_uuid")
-  email         String
-  firstName     String        @map("first_name")
-  lastName      String        @map("last_name")
-  phone         String?
-  documentType  String?       @map("document_type")
-  documentNumber String?      @map("document_number")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
-  posts         Post[]
-  companies     UserCompany[]
+  id             String             @id @default(cuid())
+  supabaseUuid   String             @unique @map("supabase_uuid")
+  email          String
+  firstName      String             @map("first_name")
+  lastName       String             @map("last_name")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  documentNumber String?            @map("document_number")
+  documentType   String?            @map("document_type")
+  phone          String?
+  posts          Post[]
+  companies      UserCompany[]
+  configuration  UserConfiguration?
 
   @@map("users")
 }
 
 model UserCompany {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  companyId String   @map("company_id")
-  role      UserRole @default(USER)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  companyId  String   @map("company_id")
+  role       UserRole @default(USER)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  isSelected Boolean  @default(false) @map("is_selected")
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, companyId])
+  @@index([userId, isSelected])
   @@map("user_companies")
+}
+
+model UserConfiguration {
+  id               String   @id @default(cuid())
+  userId           String   @unique @map("user_id")
+  dateFormat       String   @default("DD/MM/YYYY") @map("date_format")
+  timeFormat       String   @default("24h") @map("time_format")
+  language         String   @default("es")
+  currency         String   @default("COP")
+  decimalSeparator String   @default(",") @map("decimal_separator")
+  itemsPerPage     Int      @default(20) @map("items_per_page")
+  theme            String   @default("light")
+  primaryColor     String   @default("#1976d2") @map("primary_color")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("users_configuration")
 }
 
 enum UserRole {

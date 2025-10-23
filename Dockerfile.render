@@ -1,0 +1,39 @@
+# Dockerfile optimizado para Render
+FROM node:20-alpine
+WORKDIR /app
+
+# Instalar dependencias del sistema necesarias para Prisma
+RUN apk add --no-cache openssl openssl-dev musl-dev
+
+# Copiar archivos de configuración
+COPY package*.json ./
+
+# Instalar todas las dependencias (incluyendo devDependencies para el build)
+RUN npm ci
+
+# Copiar archivos de Prisma
+COPY prisma ./prisma
+
+# Generar cliente de Prisma
+RUN npx prisma generate
+
+# Copiar el código fuente
+COPY . .
+
+# Construir la aplicación
+RUN npm run build
+
+# Limpiar devDependencies para reducir el tamaño
+RUN npm prune --production
+
+# Regenerar cliente de Prisma después de limpiar dependencias
+RUN npx prisma generate
+
+# Exponer el puerto que usa Render (puede variar, Render lo asigna automáticamente)
+EXPOSE $PORT
+
+# Configurar variables de entorno por defecto
+ENV NODE_ENV=production
+
+# Comando de inicio usando npm start (que incluye prestart)
+CMD ["npm", "start"]

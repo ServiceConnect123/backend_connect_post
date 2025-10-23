@@ -286,4 +286,131 @@ export class UserRepositoryImpl implements UserRepository {
       updatedAt: userCompany.updatedAt,
     };
   }
+
+  // Selected company methods
+  async findSelectedCompany(supabaseUuid: string): Promise<UserCompanyAssociation | null> {
+    const user = await this.findBySupabaseUuid(supabaseUuid);
+    if (!user) return null;
+
+    // Use any type assertion to bypass temporary TypeScript issues
+    const selectedUserCompany = await (this.prisma.userCompany as any).findFirst({
+      where: { 
+        userId: user.id,
+        isSelected: true 
+      },
+      include: { company: true },
+    });
+
+    if (!selectedUserCompany) {
+      // Si no hay compañía seleccionada, seleccionar la primera disponible
+      const firstUserCompany = await this.prisma.userCompany.findFirst({
+        where: { userId: user.id },
+        include: { company: true },
+        orderBy: { createdAt: 'asc' }
+      });
+
+      if (!firstUserCompany) return null;
+
+      // Mark as selected using type assertion
+      await (this.prisma.userCompany as any).update({
+        where: { id: firstUserCompany.id },
+        data: { isSelected: true }
+      });
+
+      return {
+        user,
+        company: Company.create({
+          name: firstUserCompany.company.name,
+          nit: firstUserCompany.company.nit,
+          email: firstUserCompany.company.email,
+          phone: firstUserCompany.company.phone,
+          address: firstUserCompany.company.address,
+          countryId: firstUserCompany.company.countryId,
+          cityId: firstUserCompany.company.cityId,
+          createdAt: firstUserCompany.company.createdAt,
+          updatedAt: firstUserCompany.company.updatedAt,
+        }, firstUserCompany.company.id),
+        role: firstUserCompany.role as UserRole,
+        userCompanyId: firstUserCompany.id,
+        createdAt: firstUserCompany.createdAt,
+        updatedAt: firstUserCompany.updatedAt,
+      };
+    }
+
+    return {
+      user,
+      company: Company.create({
+        name: selectedUserCompany.company.name,
+        nit: selectedUserCompany.company.nit,
+        email: selectedUserCompany.company.email,
+        phone: selectedUserCompany.company.phone,
+        address: selectedUserCompany.company.address,
+        countryId: selectedUserCompany.company.countryId,
+        cityId: selectedUserCompany.company.cityId,
+        createdAt: selectedUserCompany.company.createdAt,
+        updatedAt: selectedUserCompany.company.updatedAt,
+      }, selectedUserCompany.company.id),
+      role: selectedUserCompany.role as UserRole,
+      userCompanyId: selectedUserCompany.id,
+      createdAt: selectedUserCompany.createdAt,
+      updatedAt: selectedUserCompany.updatedAt,
+    };
+  }
+
+  async setSelectedCompany(supabaseUuid: string, companyId: string): Promise<UserCompanyAssociation> {
+    const user = await this.findBySupabaseUuid(supabaseUuid);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Verificar que el usuario tiene acceso a la compañía
+    const userCompany = await this.prisma.userCompany.findUnique({
+      where: {
+        userId_companyId: {
+          userId: user.id,
+          companyId,
+        },
+      },
+      include: { company: true },
+    });
+
+    if (!userCompany) {
+      throw new Error('User does not have access to this company');
+    }
+
+    // Unmark all selected companies for the user using type assertion
+    await (this.prisma.userCompany as any).updateMany({
+      where: { 
+        userId: user.id,
+        isSelected: true 
+      },
+      data: { isSelected: false }
+    });
+
+    // Mark the new company as selected using type assertion
+    const updatedUserCompany = await (this.prisma.userCompany as any).update({
+      where: { id: userCompany.id },
+      data: { isSelected: true },
+      include: { company: true }
+    });
+
+    return {
+      user,
+      company: Company.create({
+        name: updatedUserCompany.company.name,
+        nit: updatedUserCompany.company.nit,
+        email: updatedUserCompany.company.email,
+        phone: updatedUserCompany.company.phone,
+        address: updatedUserCompany.company.address,
+        countryId: updatedUserCompany.company.countryId,
+        cityId: updatedUserCompany.company.cityId,
+        createdAt: updatedUserCompany.company.createdAt,
+        updatedAt: updatedUserCompany.company.updatedAt,
+      }, updatedUserCompany.company.id),
+      role: updatedUserCompany.role as UserRole,
+      userCompanyId: updatedUserCompany.id,
+      createdAt: updatedUserCompany.createdAt,
+      updatedAt: updatedUserCompany.updatedAt,
+    };
+  }
 }

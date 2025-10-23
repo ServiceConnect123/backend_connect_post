@@ -31,4 +31,8 @@ export interface UserRepository {
   // Combined methods for convenience
   findUserWithCompanies(supabaseUuid: string): Promise<{ user: User; companies: UserCompanyAssociation[] } | null>;
   findUserCompanyAssociation(supabaseUuid: string, companyId: string): Promise<UserCompanyAssociation | null>;
+
+  // Selected company methods
+  findSelectedCompany(supabaseUuid: string): Promise<UserCompanyAssociation | null>;
+  setSelectedCompany(supabaseUuid: string, companyId: string): Promise<UserCompanyAssociation>;
 }

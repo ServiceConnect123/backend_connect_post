@@ -5,6 +5,7 @@ export interface UserCompanyProps {
   userId: string;
   companyId: string;
   role: UserRole;
+  isSelected?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -26,6 +27,10 @@ export class UserCompany extends BaseEntity<UserCompanyProps> {
     return this.props.role;
   }
 
+  get isSelected(): boolean {
+    return this.props.isSelected || false;
+  }
+
   get createdAt(): Date | undefined {
     return this.props.createdAt;
   }
@@ -44,6 +49,7 @@ export class UserCompany extends BaseEntity<UserCompanyProps> {
       userId: this.userId,
       companyId: this.companyId,
       role: this.role,
+      isSelected: this.isSelected,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };

@@ -13,8 +13,11 @@ import { SupabaseAuthGuard } from '../../../../shared/infrastructure/guards/supa
 import { LoginUseCase } from '../../application/use-cases/login.use-case';
 import { RegisterUseCase } from '../../application/use-cases/register.use-case';
 import { GetProfileUseCase } from '../../application/use-cases/get-profile.use-case';
+import { SetSelectedCompanyUseCase } from '../../application/use-cases/set-selected-company.use-case';
+import { GetUserCompaniesUseCase } from '../../application/use-cases/get-user-companies.use-case';
 import { LoginDto } from '../../application/dtos/login.dto';
 import { RegisterDto } from '../../application/dtos/register.dto';
+import { SetSelectedCompanyDto } from '../../application/dtos/set-selected-company.dto';
 import { ForgotPasswordDto } from '../../application/dtos/forgot-password.dto';
 import { ResetPasswordDto } from '../../application/dtos/reset-password.dto';
 import { SupabaseAuthService } from '../services/supabase-auth.service';
@@ -26,6 +29,8 @@ export class AuthController {
     private readonly loginUseCase: LoginUseCase,
     private readonly registerUseCase: RegisterUseCase,
     private readonly getProfileUseCase: GetProfileUseCase,
+    private readonly setSelectedCompanyUseCase: SetSelectedCompanyUseCase,
+    private readonly getUserCompaniesUseCase: GetUserCompaniesUseCase,
     private readonly supabaseAuthService: SupabaseAuthService,
   ) {}
 
@@ -72,20 +77,32 @@ export class AuthController {
   @Post('login')
   @ApiOperation({ 
     summary: 'Iniciar sesión',
-    description: 'Autentica un usuario y devuelve tokens de acceso'
+    description: 'Autentica un usuario y devuelve tokens de acceso junto con la compañía seleccionada'
   })
   @ApiBody({ type: LoginDto })
   @ApiResponse({ 
     status: 200, 
-    description: 'Login exitoso',
+    description: 'Login exitoso - incluye compañía seleccionada si está disponible',
     schema: {
       example: {
         message: 'Login successful',
         user: {
-          id: 'uuid-here',
+          id: 'b2711700-243d-442e-923e-28a1f40f6e4e',
           email: 'user@example.com',
           name: 'User Name',
           emailConfirmed: true
+        },
+        company: {
+          id: 'db8150ff-bc99-442f-b5ec-d95878a88278',
+          name: 'sconnect',
+          nit: '900123412-7',
+          email: 'contact@company.com',
+          phone: '+57 3001234567',
+          address: 'Cra 10 # 45-23',
+          countryId: 'country-id',
+          cityId: 'city-id',
+          createdAt: '2025-10-22T01:03:34.024Z',
+          updatedAt: '2025-10-22T01:03:34.024Z'
         },
         session: {
           accessToken: 'jwt-token-here',
@@ -270,5 +287,98 @@ export class AuthController {
       return { message: 'Password update failed', error: result.error.message };
     }
     return { message: 'Password updated successfully' };
+  }
+
+  @Put('selected-company')
+  @UseGuards(SupabaseAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ 
+    summary: 'Cambiar compañía seleccionada',
+    description: 'Establece una nueva compañía como seleccionada para el usuario autenticado'
+  })
+  @ApiBody({ type: SetSelectedCompanyDto })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Compañía seleccionada actualizada exitosamente'
+  })
+  @ApiUnauthorizedResponse({ 
+    description: 'Token JWT inválido o usuario no autenticado'
+  })
+  @ApiBadRequestResponse({ 
+    description: 'ID de compañía inválido o usuario no tiene acceso a la compañía'
+  })
+  async setSelectedCompany(
+    @Request() req: any,
+    @Body() setSelectedCompanyDto: SetSelectedCompanyDto
+  ) {
+    const user = req.user;
+    return await this.setSelectedCompanyUseCase.execute(
+      user.supabaseUuid,
+      setSelectedCompanyDto.companyId
+    );
+  }
+
+  @Get('companies')
+  @UseGuards(SupabaseAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ 
+    summary: 'Obtener compañías del usuario',
+    description: 'Obtiene todas las compañías asociadas al usuario autenticado, incluyendo la compañía seleccionada'
+  })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Compañías obtenidas exitosamente',
+    schema: {
+      example: {
+        message: 'Compañías obtenidas exitosamente',
+        user: {
+          id: 'cuid-user-id',
+          email: 'user@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+          fullName: 'John Doe'
+        },
+        companies: [
+          {
+            id: 'company-id-1',
+            name: 'NetSolutionLabs',
+            nit: '900123456-7',
+            email: 'contact@netsolutionlabs.com',
+            phone: '+57 3001234567',
+            address: 'Cra 10 # 45-23',
+            countryId: 'country-id',
+            cityId: 'city-id',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            updatedAt: '2024-01-01T00:00:00.000Z',
+            userRole: 'ADMIN',
+            userCompanyId: 'user-company-id',
+            associatedAt: '2024-01-01T00:00:00.000Z'
+          }
+        ],
+        selectedCompany: {
+          id: 'company-id-1',
+          name: 'NetSolutionLabs',
+          nit: '900123456-7',
+          email: 'contact@netsolutionlabs.com',
+          phone: '+57 3001234567',
+          address: 'Cra 10 # 45-23',
+          countryId: 'country-id',
+          cityId: 'city-id',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
+          userRole: 'ADMIN',
+          isSelected: true
+        },
+        totalCompanies: 1,
+        isMultiCompany: false
+      }
+    }
+  })
+  @ApiUnauthorizedResponse({ 
+    description: 'Token JWT inválido o usuario no autenticado'
+  })
+  async getUserCompanies(@Request() req: any) {
+    const user = req.user;
+    return await this.getUserCompaniesUseCase.execute(user.supabaseUuid);
   }
 }

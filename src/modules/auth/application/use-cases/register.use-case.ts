@@ -9,6 +9,8 @@ import { User } from '../../domain/entities/user.entity';
 import { UserCompany } from '../../domain/entities/user-company.entity';
 import { Company } from '../../domain/entities/company.entity';
 import { COMPANY_REPOSITORY_TOKEN } from '../../domain/repositories/company.repository.token';
+import type { UserConfigurationRepository } from '../../../configurations/domain/repositories/user-configuration.repository';
+import { USER_CONFIGURATION_REPOSITORY_TOKEN } from '../../../configurations/domain/repositories/user-configuration.repository.token';
 
 @Injectable()
 export class RegisterUseCase {
@@ -18,6 +20,8 @@ export class RegisterUseCase {
     private readonly userRepository: UserRepository,
     @Inject(COMPANY_REPOSITORY_TOKEN)
     private readonly companyRepository: CompanyRepository,
+    @Inject(USER_CONFIGURATION_REPOSITORY_TOKEN)
+    private readonly userConfigurationRepository: UserConfigurationRepository,
   ) {}
 
   async execute(registerDto: RegisterDto) {
@@ -143,6 +147,15 @@ export class RegisterUseCase {
 
         user = await this.userRepository.create(user);
         console.log(`✅ Usuario nuevo creado en BD local con ID: ${user.id}`);
+        
+        // 7.1. Crear configuración por defecto para usuario nuevo
+        try {
+          await this.userConfigurationRepository.createDefaultConfiguration(user.id);
+          console.log(`⚙️ Configuración por defecto creada para usuario ${user.id}`);
+        } catch (error) {
+          console.error(`❌ Error creando configuración por defecto para usuario ${user.id}:`, error);
+          // No lanzamos error para no interrumpir el registro
+        }
       } else if (!user && !isNewUser) {
         // Usuario existe en Supabase pero no en BD local (caso edge)
         console.log(`👤 Usuario existe en Auth pero no en BD local, creando...`);
@@ -158,6 +171,15 @@ export class RegisterUseCase {
 
         user = await this.userRepository.create(user);
         console.log(`✅ Usuario creado en BD local con ID: ${user.id}`);
+        
+        // 7.2. Crear configuración por defecto para usuario existente sin configuración
+        try {
+          await this.userConfigurationRepository.createDefaultConfiguration(user.id);
+          console.log(`⚙️ Configuración por defecto creada para usuario existente ${user.id}`);
+        } catch (error) {
+          console.error(`❌ Error creando configuración por defecto para usuario ${user.id}:`, error);
+          // No lanzamos error para no interrumpir el registro
+        }
       }
 
       // 8. Verificar si ya existe una asociación usuario-empresa
