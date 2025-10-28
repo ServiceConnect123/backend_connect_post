@@ -312,8 +312,11 @@ export class AuthController {
     @Body() setSelectedCompanyDto: SetSelectedCompanyDto
   ) {
     const user = req.user;
+    console.log('🔍 SetSelectedCompany - User object keys:', Object.keys(user));
+    console.log('🔍 SetSelectedCompany - User ID:', user.id);
+    console.log('🔍 SetSelectedCompany - User email:', user.email);
     return await this.setSelectedCompanyUseCase.execute(
-      user.supabaseUuid,
+      user.id, // Use user.id instead of user.supabaseUuid
       setSelectedCompanyDto.companyId
     );
   }
@@ -379,6 +382,9 @@ export class AuthController {
   })
   async getUserCompanies(@Request() req: any) {
     const user = req.user;
-    return await this.getUserCompaniesUseCase.execute(user.supabaseUuid);
+    console.log('🔍 GetUserCompanies - User object keys:', Object.keys(user));
+    console.log('🔍 GetUserCompanies - User ID:', user.id);
+    console.log('🔍 GetUserCompanies - User email:', user.email);
+    return await this.getUserCompaniesUseCase.execute(user.id); // Use user.id instead of user.supabaseUuid
   }
 }

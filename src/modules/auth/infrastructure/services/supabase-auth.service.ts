@@ -99,11 +99,27 @@ export class SupabaseAuthService {
   }
 
   async getUser(accessToken: string): Promise<{ user: any; error: AuthError | null }> {
+    console.log('🔍 SupabaseAuthService.getUser called');
+    console.log('   Mock mode:', this.useMockMode);
+    console.log('   Token length:', accessToken?.length || 0);
+
     if (this.useMockMode) {
+      console.log('   Using mock mode');
       return this.mockGetUser(accessToken);
     }
 
+    console.log('   Calling Supabase auth.getUser...');
     const { data, error } = await this.supabase.auth.getUser(accessToken);
+    
+    console.log('   Supabase response:');
+    console.log('     Error:', error ? error.message : 'None');
+    console.log('     User found:', !!data?.user);
+    
+    if (data?.user) {
+      console.log('     User ID:', data.user.id);
+      console.log('     User email:', data.user.email);
+    }
+
     return {
       user: data?.user || null,
       error,

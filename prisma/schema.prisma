@@ -101,21 +101,67 @@ model UserCompany {
 }
 
 model UserConfiguration {
-  id               String   @id @default(cuid())
-  userId           String   @unique @map("user_id")
-  dateFormat       String   @default("DD/MM/YYYY") @map("date_format")
-  timeFormat       String   @default("24h") @map("time_format")
-  language         String   @default("es")
-  currency         String   @default("COP")
-  decimalSeparator String   @default(",") @map("decimal_separator")
-  itemsPerPage     Int      @default(20) @map("items_per_page")
-  theme            String   @default("light")
-  primaryColor     String   @default("#1976d2") @map("primary_color")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String     @id @default(cuid())
+  userId           String     @unique @map("user_id")
+  dateFormat       String     @default("DD/MM/YYYY") @map("date_format")
+  timeFormatId     String?    @map("time_format_id")
+  languageId       String?    @map("language_id")
+  currencyId       String?    @map("currency_id")
+  decimalSeparator String     @default(",") @map("decimal_separator")
+  itemsPerPage     Int        @default(20) @map("items_per_page")
+  theme            String     @default("light")
+  primaryColor     String     @default("#1976d2") @map("primary_color")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timeFormat       TimeFormat? @relation(fields: [timeFormatId], references: [id])
+  language         Language?   @relation(fields: [languageId], references: [id])
+  currency         Currency?   @relation(fields: [currencyId], references: [id])
 
   @@map("users_configuration")
+}
+
+model TimeFormat {
+  id                 String              @id @default(cuid())
+  value              String              @unique
+  name               String
+  description        String?
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  userConfigurations UserConfiguration[]
+
+  @@map("time_formats")
+}
+
+model Language {
+  id                 String              @id @default(cuid())
+  code               String              @unique
+  name               String
+  nativeName         String?
+  country            String?
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  userConfigurations UserConfiguration[]
+
+  @@map("languages")
+}
+
+model Currency {
+  id                 String              @id @default(cuid())
+  code               String              @unique
+  name               String
+  symbol             String
+  country            String
+  type               String
+  decimalPlaces      Int                 @default(2)
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  userConfigurations UserConfiguration[]
+
+  @@map("currencies")
 }
 
 enum UserRole {

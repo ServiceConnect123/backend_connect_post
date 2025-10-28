@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthController } from './infrastructure/controllers/auth.controller';
+// import { DebugAuthController } from './infrastructure/controllers/debug-auth.controller';
 import { LoginUseCase } from './application/use-cases/login.use-case';
 import { GetProfileUseCase } from './application/use-cases/get-profile.use-case';
 import { SupabaseAuthService } from './infrastructure/services/supabase-auth.service';
@@ -18,7 +19,7 @@ import { UserConfigurationRepositoryImpl } from '../configurations/infrastructur
 
 @Module({
   imports: [SharedModule, LocationsModule],
-  controllers: [AuthController],
+  controllers: [AuthController], // DebugAuthController],
   providers: [
     LoginUseCase,
     RegisterUseCase,

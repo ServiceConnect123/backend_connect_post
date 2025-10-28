@@ -62,7 +62,84 @@ async function bootstrap() {
   
   const configBuilder = new DocumentBuilder()
     .setTitle('BackConnectPost API')
-    .setDescription('Una API de blog construida con arquitectura hexagonal y NestJS')
+    .setDescription(`
+# BackConnectPost API - Sistema de Gestión Empresarial
+
+## 🎯 Descripción General
+API RESTful robusta y escalable construida con **NestJS** y **Arquitectura Hexagonal** para la gestión integral de contenido empresarial y administración multiempresa.
+
+## 🏗️ Arquitectura
+- **Patrón Hexagonal**: Separación clara entre dominio, aplicación e infraestructura
+- **SOLID Principles**: Código mantenible y extensible
+- **Domain Driven Design**: Modelado centrado en el dominio de negocio
+- **Dependency Injection**: Gestión automática de dependencias con NestJS
+
+## 📋 Funcionalidades Principales
+
+### 🔐 **Sistema de Autenticación**
+- Registro y login con **Supabase Auth**
+- JWT tokens para autenticación stateless
+- Gestión de perfiles de usuario completos
+- Recuperación de contraseñas y verificación de email
+
+### 🏢 **Gestión Multiempresa**
+- Usuarios pueden pertenecer a múltiples empresas
+- Sistema de roles por empresa (ADMIN, USER, MODERATOR)
+- Selección de empresa activa por sesión
+- Gestión de permisos granulares
+
+### 📝 **Sistema de Posts y Contenido**
+- CRUD completo de posts con estados (borrador/publicado)
+- Sistema de categorías y etiquetas
+- Gestión de medios y archivos adjuntos
+- Control de visibilidad y permisos
+
+### ⚙️ **Configuraciones de Usuario**
+- Preferencias personalizables (idioma, moneda, tema)
+- Configuraciones de interfaz adaptables
+- Formatos de fecha y hora localizados
+- Configuraciones automáticas por defecto
+
+### 🌍 **Utilidades del Sistema**
+- Catálogo de países y ciudades
+- Gestión de monedas internacionales
+- Soporte multiidioma dinámico
+- Formatos de tiempo configurables
+
+### 📊 **Sistema de Navegación**
+- Menús dinámicos basados en permisos
+- Navegación contextual por empresa
+- Sidebar adaptativo según rol de usuario
+
+## 🔧 **Tecnologías Utilizadas**
+- **Backend**: NestJS, TypeScript, Prisma ORM
+- **Base de Datos**: PostgreSQL con Neon
+- **Autenticación**: Supabase Auth
+- **Validación**: class-validator, class-transformer
+- **Documentación**: Swagger/OpenAPI 3.0
+- **Deployment**: Docker, Render Cloud Platform
+
+## 🚀 **Características Técnicas**
+- **Validación robusta** de datos de entrada
+- **Manejo de errores** centralizado y consistente
+- **Logging** estructurado para debugging
+- **CORS** configurado para desarrollo y producción
+- **Rate limiting** y seguridad implementada
+- **Health checks** para monitoreo
+
+## 📚 **Casos de Uso**
+- Gestión de blogs corporativos
+- Plataformas de contenido multiempresa
+- Sistemas de gestión documental
+- Portales de empleados y colaboradores
+- Aplicaciones SaaS con multi-tenancy
+
+## 🔄 **Versionado y Compatibilidad**
+- API versionada y retrocompatible
+- Migraciones de base de datos automatizadas
+- Documentación actualizada automáticamente
+- Testing automatizado de endpoints
+    `)
     .setVersion('1.0.0')
     .addBearerAuth(
       {
@@ -75,8 +152,12 @@ async function bootstrap() {
       },
       'JWT-auth',
     )
-    .addTag('Authentication', 'Endpoints para autenticación de usuarios')
-    .addTag('Posts', 'Endpoints para gestión de posts del blog');
+    .addTag('Authentication', 'Endpoints para autenticación de usuarios con Supabase')
+    .addTag('Posts', 'Gestión completa de posts del blog con estados y permisos')
+    .addTag('Configurations', 'Configuraciones personalizables de usuario')
+    .addTag('Utils', 'Utilidades del sistema (monedas, idiomas, formatos)')
+    .addTag('Locations', 'Gestión de países y ciudades')
+    .addTag('Navigation', 'Sistema de navegación dinámico');
 
   // Add servers based on environment
   if (isProduction) {

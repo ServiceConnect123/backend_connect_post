@@ -1,11 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../../shared/infrastructure/database/prisma.service';
 import { UserConfigurationRepository } from '../../domain/repositories/user-configuration.repository';
 import { UserConfiguration } from '../../domain/entities/user-configuration.entity';
 
 @Injectable()
 export class UserConfigurationRepositoryImpl implements UserConfigurationRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: any) {}
 
   async findByUserId(userId: string): Promise<UserConfiguration | null> {
     const config = await this.prisma.userConfiguration.findUnique({
@@ -14,24 +13,20 @@ export class UserConfigurationRepositoryImpl implements UserConfigurationReposit
 
     if (!config) return null;
 
-    // Convert old schema values to new ID-based format
-    const timeFormatId = await this.getTimeFormatIdByValue(config.timeFormat as string);
-    const languageId = await this.getLanguageIdByCode(config.language as string);
-    const currencyId = await this.getCurrencyIdByCode(config.currency as string);
-
+    // For now, we'll work with the existing fields and provide mock IDs
     return UserConfiguration.create({
       userId: config.userId,
       dateFormat: config.dateFormat,
-      timeFormatId: timeFormatId,
-      languageId: languageId,
-      currencyId: currencyId,
+      timeFormatId: await this.getTimeFormatIdByValue(config.timeFormat as string),
+      languageId: await this.getLanguageIdByCode(config.language as string),
+      currencyId: await this.getCurrencyIdByCode(config.currency as string),
       decimalSeparator: config.decimalSeparator,
       itemsPerPage: config.itemsPerPage,
       theme: config.theme,
       primaryColor: config.primaryColor,
       createdAt: config.createdAt,
       updatedAt: config.updatedAt,
-      // Include the full related entities using mock data
+      // Include the full related entities
       timeFormat: await this.getTimeFormatByValue(config.timeFormat as string),
       language: await this.getLanguageByCode(config.language as string),
       currency: await this.getCurrencyByCode(config.currency as string),
@@ -53,23 +48,19 @@ export class UserConfigurationRepositoryImpl implements UserConfigurationReposit
     }
 
     const config = user.configuration;
-    const timeFormatId = await this.getTimeFormatIdByValue(config.timeFormat as string);
-    const languageId = await this.getLanguageIdByCode(config.language as string);
-    const currencyId = await this.getCurrencyIdByCode(config.currency as string);
-
     return UserConfiguration.create({
       userId: config.userId,
       dateFormat: config.dateFormat,
-      timeFormatId: timeFormatId,
-      languageId: languageId,
-      currencyId: currencyId,
+      timeFormatId: await this.getTimeFormatIdByValue(config.timeFormat as string),
+      languageId: await this.getLanguageIdByCode(config.language as string),
+      currencyId: await this.getCurrencyIdByCode(config.currency as string),
       decimalSeparator: config.decimalSeparator,
       itemsPerPage: config.itemsPerPage,
       theme: config.theme,
       primaryColor: config.primaryColor,
       createdAt: config.createdAt,
       updatedAt: config.updatedAt,
-      // Include the full related entities using mock data
+      // Include the full related entities
       timeFormat: await this.getTimeFormatByValue(config.timeFormat as string),
       language: await this.getLanguageByCode(config.language as string),
       currency: await this.getCurrencyByCode(config.currency as string),
@@ -78,12 +69,9 @@ export class UserConfigurationRepositoryImpl implements UserConfigurationReposit
 
   async create(configuration: UserConfiguration): Promise<UserConfiguration> {
     // Convert IDs back to values for storage in the old schema
-    const timeFormatValue = configuration.timeFormat?.value || 
-      (configuration.timeFormatId ? (await this.getTimeFormatById(configuration.timeFormatId))?.value : null) || '24h';
-    const languageCode = configuration.language?.code || 
-      (configuration.languageId ? (await this.getLanguageById(configuration.languageId))?.code : null) || 'es';
-    const currencyCode = configuration.currency?.code || 
-      (configuration.currencyId ? (await this.getCurrencyById(configuration.currencyId))?.code : null) || 'COP';
+    const timeFormatValue = configuration.timeFormat?.value || '24h';
+    const languageCode = configuration.language?.code || 'es';
+    const currencyCode = configuration.currency?.code || 'COP';
 
     const created = await this.prisma.userConfiguration.create({
       data: {
@@ -120,11 +108,11 @@ export class UserConfigurationRepositoryImpl implements UserConfigurationReposit
   async update(configuration: UserConfiguration): Promise<UserConfiguration> {
     // Convert IDs back to values for storage in the old schema
     const timeFormatValue = configuration.timeFormat?.value || 
-      (configuration.timeFormatId ? (await this.getTimeFormatById(configuration.timeFormatId))?.value : null) || '24h';
+      (await this.getTimeFormatById(configuration.timeFormatId!))?.value || '24h';
     const languageCode = configuration.language?.code || 
-      (configuration.languageId ? (await this.getLanguageById(configuration.languageId))?.code : null) || 'es';
+      (await this.getLanguageById(configuration.languageId!))?.code || 'es';
     const currencyCode = configuration.currency?.code || 
-      (configuration.currencyId ? (await this.getCurrencyById(configuration.currencyId))?.code : null) || 'COP';
+      (await this.getCurrencyById(configuration.currencyId!))?.code || 'COP';
 
     const updated = await this.prisma.userConfiguration.update({
       where: { id: configuration.id },
@@ -174,16 +162,12 @@ export class UserConfigurationRepositoryImpl implements UserConfigurationReposit
 
     if (existingConfig) {
       console.log(`⚠️ Configuration already exists for user ${userId}, returning existing one`);
-      const timeFormatId = await this.getTimeFormatIdByValue(existingConfig.timeFormat as string);
-      const languageId = await this.getLanguageIdByCode(existingConfig.language as string);
-      const currencyId = await this.getCurrencyIdByCode(existingConfig.currency as string);
-
       return UserConfiguration.create({
         userId: existingConfig.userId,
         dateFormat: existingConfig.dateFormat,
-        timeFormatId: timeFormatId,
-        languageId: languageId,
-        currencyId: currencyId,
+        timeFormatId: await this.getTimeFormatIdByValue(existingConfig.timeFormat as string),
+        languageId: await this.getLanguageIdByCode(existingConfig.language as string),
+        currencyId: await this.getCurrencyIdByCode(existingConfig.currency as string),
         decimalSeparator: existingConfig.decimalSeparator,
         itemsPerPage: existingConfig.itemsPerPage,
         theme: existingConfig.theme,
@@ -203,45 +187,32 @@ export class UserConfigurationRepositoryImpl implements UserConfigurationReposit
     return await this.create(defaultConfig);
   }
 
-  // Helper methods to work with the utils tables (using mock data until Prisma client is updated)
+  // Helper methods to work with the utils tables
   private async getTimeFormatIdByValue(value: string): Promise<string | null> {
-    const mockTimeFormats = [
-      { id: 'tf1', value: '12h', name: '12 Hours', description: '12-hour format with AM/PM' },
-      { id: 'tf2', value: '24h', name: '24 Hours', description: '24-hour format' }
-    ];
-    const timeFormat = mockTimeFormats.find(tf => tf.value === value);
+    const timeFormat = await this.prisma.timeFormat.findFirst({
+      where: { value, isActive: true }
+    });
     return timeFormat?.id || null;
   }
 
   private async getLanguageIdByCode(code: string): Promise<string | null> {
-    const mockLanguages = [
-      { id: 'lang1', code: 'es', name: 'Spanish', nativeName: 'Español', country: 'Colombia' },
-      { id: 'lang2', code: 'en', name: 'English', nativeName: 'English', country: 'United States' },
-      { id: 'lang3', code: 'pt', name: 'Portuguese', nativeName: 'Português', country: 'Brazil' },
-      { id: 'lang4', code: 'fr', name: 'French', nativeName: 'Français', country: 'France' }
-    ];
-    const language = mockLanguages.find(lang => lang.code === code);
+    const language = await this.prisma.language.findFirst({
+      where: { code, isActive: true }
+    });
     return language?.id || null;
   }
 
   private async getCurrencyIdByCode(code: string): Promise<string | null> {
-    const mockCurrencies = [
-      { id: 'curr1', code: 'COP', name: 'Colombian Peso', symbol: '$', country: 'Colombia', type: 'Pesos', decimalPlaces: 0 },
-      { id: 'curr2', code: 'USD', name: 'US Dollar', symbol: '$', country: 'United States', type: 'Dollars', decimalPlaces: 2 },
-      { id: 'curr3', code: 'EUR', name: 'Euro', symbol: '€', country: 'European Union', type: 'Euros', decimalPlaces: 2 },
-      { id: 'curr4', code: 'BRL', name: 'Brazilian Real', symbol: 'R$', country: 'Brazil', type: 'Reais', decimalPlaces: 2 },
-      { id: 'curr5', code: 'GTQ', name: 'Guatemalan Quetzal', symbol: 'Q', country: 'Guatemala', type: 'Quetzales', decimalPlaces: 2 }
-    ];
-    const currency = mockCurrencies.find(curr => curr.code === code);
+    const currency = await this.prisma.currency.findFirst({
+      where: { code, isActive: true }
+    });
     return currency?.id || null;
   }
 
   private async getTimeFormatByValue(value: string): Promise<any | null> {
-    const mockTimeFormats = [
-      { id: 'tf1', value: '12h', name: '12 Hours', description: '12-hour format with AM/PM' },
-      { id: 'tf2', value: '24h', name: '24 Hours', description: '24-hour format' }
-    ];
-    const timeFormat = mockTimeFormats.find(tf => tf.value === value);
+    const timeFormat = await this.prisma.timeFormat.findFirst({
+      where: { value, isActive: true }
+    });
     return timeFormat ? {
       id: timeFormat.id,
       value: timeFormat.value,
@@ -251,13 +222,9 @@ export class UserConfigurationRepositoryImpl implements UserConfigurationReposit
   }
 
   private async getLanguageByCode(code: string): Promise<any | null> {
-    const mockLanguages = [
-      { id: 'lang1', code: 'es', name: 'Spanish', nativeName: 'Español', country: 'Colombia' },
-      { id: 'lang2', code: 'en', name: 'English', nativeName: 'English', country: 'United States' },
-      { id: 'lang3', code: 'pt', name: 'Portuguese', nativeName: 'Português', country: 'Brazil' },
-      { id: 'lang4', code: 'fr', name: 'French', nativeName: 'Français', country: 'France' }
-    ];
-    const language = mockLanguages.find(lang => lang.code === code);
+    const language = await this.prisma.language.findFirst({
+      where: { code, isActive: true }
+    });
     return language ? {
       id: language.id,
       code: language.code,
@@ -268,14 +235,9 @@ export class UserConfigurationRepositoryImpl implements UserConfigurationReposit
   }
 
   private async getCurrencyByCode(code: string): Promise<any | null> {
-    const mockCurrencies = [
-      { id: 'curr1', code: 'COP', name: 'Colombian Peso', symbol: '$', country: 'Colombia', type: 'Pesos', decimalPlaces: 0 },
-      { id: 'curr2', code: 'USD', name: 'US Dollar', symbol: '$', country: 'United States', type: 'Dollars', decimalPlaces: 2 },
-      { id: 'curr3', code: 'EUR', name: 'Euro', symbol: '€', country: 'European Union', type: 'Euros', decimalPlaces: 2 },
-      { id: 'curr4', code: 'BRL', name: 'Brazilian Real', symbol: 'R$', country: 'Brazil', type: 'Reais', decimalPlaces: 2 },
-      { id: 'curr5', code: 'GTQ', name: 'Guatemalan Quetzal', symbol: 'Q', country: 'Guatemala', type: 'Quetzales', decimalPlaces: 2 }
-    ];
-    const currency = mockCurrencies.find(curr => curr.code === code);
+    const currency = await this.prisma.currency.findFirst({
+      where: { code, isActive: true }
+    });
     return currency ? {
       id: currency.id,
       code: currency.code,
@@ -288,11 +250,9 @@ export class UserConfigurationRepositoryImpl implements UserConfigurationReposit
   }
 
   private async getTimeFormatById(id: string): Promise<any | null> {
-    const mockTimeFormats = [
-      { id: 'tf1', value: '12h', name: '12 Hours', description: '12-hour format with AM/PM' },
-      { id: 'tf2', value: '24h', name: '24 Hours', description: '24-hour format' }
-    ];
-    const timeFormat = mockTimeFormats.find(tf => tf.id === id);
+    const timeFormat = await this.prisma.timeFormat.findUnique({
+      where: { id }
+    });
     return timeFormat ? {
       id: timeFormat.id,
       value: timeFormat.value,
@@ -302,13 +262,9 @@ export class UserConfigurationRepositoryImpl implements UserConfigurationReposit
   }
 
   private async getLanguageById(id: string): Promise<any | null> {
-    const mockLanguages = [
-      { id: 'lang1', code: 'es', name: 'Spanish', nativeName: 'Español', country: 'Colombia' },
-      { id: 'lang2', code: 'en', name: 'English', nativeName: 'English', country: 'United States' },
-      { id: 'lang3', code: 'pt', name: 'Portuguese', nativeName: 'Português', country: 'Brazil' },
-      { id: 'lang4', code: 'fr', name: 'French', nativeName: 'Français', country: 'France' }
-    ];
-    const language = mockLanguages.find(lang => lang.id === id);
+    const language = await this.prisma.language.findUnique({
+      where: { id }
+    });
     return language ? {
       id: language.id,
       code: language.code,
@@ -319,14 +275,9 @@ export class UserConfigurationRepositoryImpl implements UserConfigurationReposit
   }
 
   private async getCurrencyById(id: string): Promise<any | null> {
-    const mockCurrencies = [
-      { id: 'curr1', code: 'COP', name: 'Colombian Peso', symbol: '$', country: 'Colombia', type: 'Pesos', decimalPlaces: 0 },
-      { id: 'curr2', code: 'USD', name: 'US Dollar', symbol: '$', country: 'United States', type: 'Dollars', decimalPlaces: 2 },
-      { id: 'curr3', code: 'EUR', name: 'Euro', symbol: '€', country: 'European Union', type: 'Euros', decimalPlaces: 2 },
-      { id: 'curr4', code: 'BRL', name: 'Brazilian Real', symbol: 'R$', country: 'Brazil', type: 'Reais', decimalPlaces: 2 },
-      { id: 'curr5', code: 'GTQ', name: 'Guatemalan Quetzal', symbol: 'Q', country: 'Guatemala', type: 'Quetzales', decimalPlaces: 2 }
-    ];
-    const currency = mockCurrencies.find(curr => curr.id === id);
+    const currency = await this.prisma.currency.findUnique({
+      where: { id }
+    });
     return currency ? {
       id: currency.id,
       code: currency.code,

@@ -61,9 +61,9 @@ async function createDefaultConfigurations() {
           data: {
             userId: user.id,
             dateFormat: 'DD/MM/YYYY',
-            timeFormat: '24h',
-            language: 'es',
-            currency: 'COP',
+            timeFormatId: (await prisma.timeFormat.findFirst({ where: { value: '24h' } }))?.id,
+            languageId: (await prisma.language.findFirst({ where: { code: 'es' } }))?.id,
+            currencyId: (await prisma.currency.findFirst({ where: { code: 'COP' } }))?.id,
             decimalSeparator: ',',
             itemsPerPage: 10,
             theme: 'light',

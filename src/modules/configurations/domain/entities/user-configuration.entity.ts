@@ -1,32 +1,64 @@
+// Types for related entities
+export interface TimeFormatInfo {
+  id: string;
+  value: string;
+  name: string;
+  description?: string;
+}
+
+export interface LanguageInfo {
+  id: string;
+  code: string;
+  name: string;
+  nativeName?: string;
+  country?: string;
+}
+
+export interface CurrencyInfo {
+  id: string;
+  code: string;
+  name: string;
+  symbol: string;
+  country: string;
+  type: string;
+  decimalPlaces: number;
+}
+
 export class UserConfiguration {
   private constructor(
     private readonly _id: string,
     private _userId: string,
     private _dateFormat: string,
-    private _timeFormat: string,
-    private _language: string,
-    private _currency: string,
+    private _timeFormatId: string | null,
+    private _languageId: string | null,
+    private _currencyId: string | null,
     private _decimalSeparator: string,
     private _itemsPerPage: number,
     private _theme: string,
     private _primaryColor: string,
     private readonly _createdAt: Date,
     private readonly _updatedAt: Date,
+    private _timeFormat?: TimeFormatInfo | null,
+    private _language?: LanguageInfo | null,
+    private _currency?: CurrencyInfo | null,
   ) {}
 
   static create(
     data: {
       userId: string;
       dateFormat?: string;
-      timeFormat?: string;
-      language?: string;
-      currency?: string;
+      timeFormatId?: string | null;
+      languageId?: string | null;
+      currencyId?: string | null;
       decimalSeparator?: string;
       itemsPerPage?: number;
       theme?: string;
       primaryColor?: string;
       createdAt?: Date;
       updatedAt?: Date;
+      timeFormat?: TimeFormatInfo | null;
+      language?: LanguageInfo | null;
+      currency?: CurrencyInfo | null;
     },
     id?: string,
   ): UserConfiguration {
@@ -34,15 +66,18 @@ export class UserConfiguration {
       id || '',
       data.userId,
       data.dateFormat || 'DD/MM/YYYY',
-      data.timeFormat || '24h',
-      data.language || 'es',
-      data.currency || 'COP',
+      data.timeFormatId || null,
+      data.languageId || null,
+      data.currencyId || null,
       data.decimalSeparator || ',',
       data.itemsPerPage || 20,
       data.theme || 'light',
       data.primaryColor || '#1976d2',
       data.createdAt || new Date(),
       data.updatedAt || new Date(),
+      data.timeFormat || null,
+      data.language || null,
+      data.currency || null,
     );
   }
 
@@ -59,16 +94,16 @@ export class UserConfiguration {
     return this._dateFormat;
   }
 
-  get timeFormat(): string {
-    return this._timeFormat;
+  get timeFormatId(): string | null {
+    return this._timeFormatId;
   }
 
-  get language(): string {
-    return this._language;
+  get languageId(): string | null {
+    return this._languageId;
   }
 
-  get currency(): string {
-    return this._currency;
+  get currencyId(): string | null {
+    return this._currencyId;
   }
 
   get decimalSeparator(): string {
@@ -95,19 +130,31 @@ export class UserConfiguration {
     return this._updatedAt;
   }
 
+  get timeFormat(): TimeFormatInfo | null {
+    return this._timeFormat || null;
+  }
+
+  get language(): LanguageInfo | null {
+    return this._language || null;
+  }
+
+  get currency(): CurrencyInfo | null {
+    return this._currency || null;
+  }
+
   // Update methods
   updateGeneralPreferences(data: {
     dateFormat?: string;
-    timeFormat?: string;
-    language?: string;
-    currency?: string;
+    timeFormatId?: string;
+    languageId?: string;
+    currencyId?: string;
     decimalSeparator?: string;
     itemsPerPage?: number;
   }): void {
     if (data.dateFormat) this._dateFormat = data.dateFormat;
-    if (data.timeFormat) this._timeFormat = data.timeFormat;
-    if (data.language) this._language = data.language;
-    if (data.currency) this._currency = data.currency;
+    if (data.timeFormatId !== undefined) this._timeFormatId = data.timeFormatId;
+    if (data.languageId !== undefined) this._languageId = data.languageId;
+    if (data.currencyId !== undefined) this._currencyId = data.currencyId;
     if (data.decimalSeparator) this._decimalSeparator = data.decimalSeparator;
     if (data.itemsPerPage !== undefined) this._itemsPerPage = data.itemsPerPage;
   }
@@ -120,25 +167,21 @@ export class UserConfiguration {
     if (data.primaryColor) this._primaryColor = data.primaryColor;
   }
 
+  // Update related entity data
+  updateRelatedEntities(data: {
+    timeFormat?: TimeFormatInfo | null;
+    language?: LanguageInfo | null;
+    currency?: CurrencyInfo | null;
+  }): void {
+    if (data.timeFormat !== undefined) this._timeFormat = data.timeFormat;
+    if (data.language !== undefined) this._language = data.language;
+    if (data.currency !== undefined) this._currency = data.currency;
+  }
+
   // Validation methods
   static isValidDateFormat(format: string): boolean {
     const validFormats = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'];
     return validFormats.includes(format);
-  }
-
-  static isValidTimeFormat(format: string): boolean {
-    const validFormats = ['12h', '24h'];
-    return validFormats.includes(format);
-  }
-
-  static isValidLanguage(language: string): boolean {
-    const validLanguages = ['es', 'en'];
-    return validLanguages.includes(language);
-  }
-
-  static isValidCurrency(currency: string): boolean {
-    const validCurrencies = ['COP', 'USD', 'GTQ', 'EUR'];
-    return validCurrencies.includes(currency);
   }
 
   static isValidDecimalSeparator(separator: string): boolean {
@@ -160,5 +203,18 @@ export class UserConfiguration {
     // Basic hex color validation
     const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
     return hexColorRegex.test(color);
+  }
+
+  // Helper methods to get readable values
+  getTimeFormatValue(): string | null {
+    return this._timeFormat?.value || null;
+  }
+
+  getLanguageCode(): string | null {
+    return this._language?.code || null;
+  }
+
+  getCurrencyCode(): string | null {
+    return this._currency?.code || null;
   }
 }

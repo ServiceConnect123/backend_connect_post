@@ -1,82 +1,70 @@
-import { IsOptional, IsString, IsInt, IsIn, Matches, Min, Max } from 'class-validator';
+import { IsOptional, IsString, IsInt, Matches, Min, Max } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateUserPreferencesDto {
   @ApiProperty({
     description: 'Formato de fecha',
     example: 'DD/MM/YYYY',
-    enum: ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'],
     required: false,
   })
   @IsOptional()
   @IsString()
-  @IsIn(['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'])
   dateFormat?: string;
 
   @ApiProperty({
-    description: 'Formato de hora',
-    example: '24h',
-    enum: ['12h', '24h'],
+    description: 'ID del formato de hora - debe ser un ID válido de la tabla time_formats',
+    example: 'tf2',
     required: false,
   })
   @IsOptional()
   @IsString()
-  @IsIn(['12h', '24h'])
   timeFormat?: string;
 
   @ApiProperty({
-    description: 'Idioma de la interfaz',
-    example: 'es',
-    enum: ['es', 'en'],
+    description: 'ID del idioma - debe ser un ID válido de la tabla languages',
+    example: 'lang1',
     required: false,
   })
   @IsOptional()
   @IsString()
-  @IsIn(['es', 'en'])
   language?: string;
 
   @ApiProperty({
-    description: 'Moneda predeterminada',
-    example: 'COP',
-    enum: ['COP', 'USD', 'GTQ', 'EUR'],
+    description: 'ID de la moneda - debe ser un ID válido de la tabla currencies',
+    example: 'curr1',
     required: false,
   })
   @IsOptional()
   @IsString()
-  @IsIn(['COP', 'USD', 'GTQ', 'EUR'])
   currency?: string;
 
   @ApiProperty({
     description: 'Separador decimal',
     example: ',',
-    enum: [',', '.'],
     required: false,
   })
   @IsOptional()
   @IsString()
-  @IsIn([',', '.'])
   decimalSeparator?: string;
 
   @ApiProperty({
     description: 'Número de elementos por página',
     example: 20,
-    enum: [10, 20, 50, 100],
     required: false,
   })
   @IsOptional()
   @IsInt()
-  @IsIn([10, 20, 50, 100])
+  @Min(1)
+  @Max(1000)
   itemsPerPage?: number;
 
   @ApiProperty({
     description: 'Tema de color',
     example: 'light',
-    enum: ['light', 'dark', 'system'],
     required: false,
   })
   @IsOptional()
   @IsString()
-  @IsIn(['light', 'dark', 'system'])
   theme?: string;
 
   @ApiProperty({
